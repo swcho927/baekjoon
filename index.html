@@ -5,33 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Code Judge Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; }
-        body { background: var(--bg); color: #f1f5f9; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
-        
-        /* Layout */
-        .sidebar { height: 100vh; border-right: 1px solid rgba(255,255,255,0.1); padding: 20px; overflow-y: auto; }
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --accent-blue: #38bdf8;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif; 
+            height: 100vh; overflow: hidden; margin: 0;
+        }
+
+        /* 레이아웃 스타일 */
+        .sidebar { height: 100vh; border-right: 1px solid rgba(255,255,255,0.1); padding: 25px; overflow-y: auto; }
         .main-view { height: 100vh; overflow-y: auto; padding: 40px; }
-        
-        /* UI Components */
-        .glass-card { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 25px; margin-bottom: 20px; }
-        .editor-container { background: #000; border-radius: 12px; padding: 15px; border: 1px solid #334155; }
-        textarea { width: 100%; height: 300px; background: transparent; color: #38bdf8; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; resize: none; }
-        
-        .prob-link { cursor: pointer; padding: 12px; border-radius: 8px; transition: 0.2s; color: #94a3b8; display: block; text-decoration: none; margin-bottom: 5px; }
-        .prob-link:hover, .prob-link.active { background: rgba(56, 189, 248, 0.1); color: var(--accent); font-weight: 600; }
-        
-        .status-tag { font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; background: #334155; }
-        pre { background: #0f172a; padding: 15px; border-radius: 8px; color: #e2e8f0; font-size: 0.9rem; }
-        
-        /* Result Animation */
-        .res-item { padding: 10px; border-radius: 6px; margin-bottom: 5px; font-size: 0.9rem; }
-        .res-correct { background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #4ade80; }
-        .res-wrong { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; }
+
+        /* 문제 카드 & 텍스트 컬러 수정 */
+        .glass-card { 
+            background: var(--card-dark); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 16px; 
+            padding: 30px; 
+            margin-bottom: 25px;
+            color: var(--text-main) !important; /* 글씨를 강제로 흰색 계열로 설정 */
+        }
+
+        h1, h2, h3, h4, h5, h6, p, span, li {
+            color: var(--text-main) !important; /* 모든 텍스트 요소를 밝게 설정 */
+        }
+
+        .text-muted-custom { color: var(--text-muted) !important; }
+
+        /* 문제 리스트 스타일 */
+        .prob-item { 
+            cursor: pointer; padding: 15px; border-radius: 12px; transition: 0.3s; 
+            background: transparent; border: 1px solid transparent; margin-bottom: 10px;
+        }
+        .prob-item:hover { background: rgba(56, 189, 248, 0.1); border-color: var(--accent-blue); }
+        .prob-item.active { background: rgba(56, 189, 248, 0.2); border-color: var(--accent-blue); }
+
+        /* 코드 에디터 */
+        .editor-container { 
+            background: #000; border-radius: 12px; padding: 15px; 
+            border: 1px solid #334155; box-shadow: 0 0 20px rgba(56, 189, 248, 0.05);
+        }
+        textarea { 
+            width: 100%; height: 350px; background: transparent; color: var(--accent-blue); 
+            border: none; outline: none; font-family: 'JetBrains Mono', monospace; 
+            font-size: 14px; resize: none;
+        }
+
+        /* 채점 결과 */
+        .res-item { padding: 12px; border-radius: 8px; margin-bottom: 8px; font-weight: 600; }
+        .res-correct { background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80 !important; }
+        .res-wrong { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171 !important; }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            border: none; color: white !important; font-weight: 700; border-radius: 10px;
+        }
+        pre { background: #000 !important; color: #4ade80 !important; padding: 15px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -40,54 +82,55 @@
     <div class="row">
         <div class="col-md-3 sidebar">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold m-0 text-info">BJ Clone</h4>
-                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i> 문제추가</button>
+                <h3 class="fw-bold text-info m-0">AI JUDGE</h3>
+                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-circle"></i></button>
             </div>
             <div id="probList"></div>
-            <hr class="opacity-10">
-            <div id="engineStatus" class="text-muted small text-center">파이썬 엔진 준비 중...</div>
+            <div id="engineStatus" class="mt-4 small text-muted-custom text-center">엔진 로딩 중...</div>
         </div>
 
         <div class="col-md-9 main-view">
-            <div id="emptyView" class="text-center py-5">
-                <h1 class="display-5 fw-bold text-secondary opacity-25 mt-5">Select a Problem</h1>
+            <div id="emptyView" class="text-center py-5 mt-5">
+                <h1 class="display-1 opacity-10"><i class="bi bi-terminal"></i></h1>
+                <h2 class="text-muted-custom">문제를 선택해 주세요</h2>
             </div>
 
             <div id="probView" style="display: none;">
-                <h1 id="vTitle" class="fw-bold"></h1>
-                <div class="d-flex gap-2 my-3">
-                    <span class="status-tag">시간 제한: 2초</span>
-                    <span class="status-tag">메모리 제한: 128MB</span>
+                <div class="d-flex justify-content-between align-items-end mb-4">
+                    <h1 id="vTitle" class="fw-bold m-0"></h1>
+                    <span class="badge bg-primary px-3 py-2" id="vLevel">Gold V</span>
                 </div>
-                
-                <div class="glass-card mt-4">
-                    <h5><i class="bi bi-info-circle me-2"></i>문제 설명</h5>
-                    <p id="vDesc" class="text-muted lh-lg"></p>
-                    <div class="row mt-4">
-                        <div class="col-6">
-                            <h6>입력 조건</h6>
-                            <p id="vInputSpec" class="small text-muted"></p>
+
+                <div class="glass-card">
+                    <h5><i class="bi bi-book me-2 text-info"></i> 문제 설명</h5>
+                    <p id="vDesc" class="mt-3 fs-5 lh-base"></p>
+                    <hr class="border-secondary my-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-info fw-bold">입력 조건</h6>
+                            <p id="vInSpec" class="small"></p>
                         </div>
-                        <div class="col-6">
-                            <h6>출력 조건</h6>
-                            <p id="vOutputSpec" class="small text-muted"></p>
+                        <div class="col-md-6">
+                            <h6 class="text-warning fw-bold">출력 조건</h6>
+                            <p id="vOutSpec" class="small"></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="editor-container mt-4">
-                    <textarea id="codeEditor" spellcheck="false" placeholder="소스 코드를 입력하세요..."></textarea>
+                <div class="editor-container">
+                    <div class="text-muted-custom mb-2 small">// Python 3 (Pyodide)</div>
+                    <textarea id="codeEditor" spellcheck="false" placeholder="이곳에 코드를 작성하세요..."></textarea>
                 </div>
 
-                <div class="d-flex gap-2 mt-3">
-                    <button id="submitBtn" class="btn btn-primary btn-lg flex-grow-1 fw-bold" disabled>제출하기</button>
-                    <button onclick="resetCode()" class="btn btn-secondary btn-lg"><i class="bi bi-arrow-counterclockwise"></i></button>
+                <div class="d-flex gap-3 mt-4">
+                    <button id="runBtn" class="btn btn-ai btn-lg flex-grow-1 py-3" disabled>제출 및 채점</button>
+                    <button onclick="resetEditor()" class="btn btn-dark border-secondary px-4"><i class="bi bi-arrow-counterclockwise"></i></button>
                 </div>
 
-                <div id="resultArea" class="mt-4 glass-card d-none">
-                    <h5 class="mb-3">채점 결과</h5>
-                    <div id="testcaseResults"></div>
-                    <h3 id="finalVerdict" class="text-center mt-3 fw-bold"></h3>
+                <div id="resultArea" class="mt-5 glass-card d-none">
+                    <h4 class="fw-bold mb-4"><i class="bi bi-check2-all me-2"></i>채점 현황</h4>
+                    <div id="caseResults"></div>
+                    <h2 id="finalVerdict" class="text-center mt-4 fw-bold"></h2>
                 </div>
             </div>
         </div>
@@ -96,153 +139,167 @@
 
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content bg-dark text-white border-secondary">
+        <div class="modal-content bg-dark border-secondary text-white">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title">새 문제 및 테스트케이스 추가</h5>
+                <h5 class="modal-title fw-bold">새 문제 및 대량 테스트케이스 등록</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-12"><label class="form-label">문제 제목</label><input type="text" id="inTitle" class="form-control bg-secondary text-white border-0"></div>
-                    <div class="col-12"><label class="form-label">문제 설명</label><textarea id="inDesc" class="form-control bg-secondary text-white border-0"></textarea></div>
-                    <div class="col-md-6"><label class="form-label">입력 조건</label><input type="text" id="inInSpec" class="form-control bg-secondary text-white border-0"></div>
-                    <div class="col-md-6"><label class="form-label">출력 조건</label><input type="text" id="inOutSpec" class="form-control bg-secondary text-white border-0"></div>
-                    <div class="col-12">
-                        <label class="form-label">테스트케이스 (형식: 입력|출력, 여러개는 줄바꿈)</label>
-                        <textarea id="inCases" placeholder="1 2|3&#10;5 5|10" class="form-control bg-secondary text-white border-0" style="height: 100px;"></textarea>
-                    </div>
+                <div class="mb-3"><label class="form-label">문제 제목</label><input type="text" id="mTitle" class="form-control bg-secondary text-white border-0"></div>
+                <div class="mb-3"><label class="form-label">상세 설명</label><textarea id="mDesc" class="form-control bg-secondary text-white border-0" rows="3"></textarea></div>
+                <div class="row mb-3">
+                    <div class="col-6"><label class="form-label">입력 조건</label><input type="text" id="mInSpec" class="form-control bg-secondary text-white border-0"></div>
+                    <div class="col-6"><label class="form-label">출력 조건</label><input type="text" id="mOutSpec" class="form-control bg-secondary text-white border-0"></div>
+                </div>
+                <div>
+                    <label class="form-label text-info">테스트케이스 (입력|출력 형식, 줄바꿈으로 구분)</label>
+                    <textarea id="mCases" class="form-control bg-secondary text-white border-0" rows="5" placeholder="1 2|3&#10;10 20|30"></textarea>
                 </div>
             </div>
             <div class="modal-footer border-secondary">
-                <button onclick="saveProblem()" class="btn btn-info w-100 fw-bold">시스템에 등록</button>
+                <button onclick="addCustomProblem()" class="btn btn-info w-100 fw-bold">저장 및 배포</button>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let pyodide = null;
-    let problems = JSON.parse(localStorage.getItem('boj_data')) || [
+    // [데이터] 골드 문제 및 풍부한 테스트케이스
+    const initialProblems = [
         {
-            title: "A + B",
+            title: "토마토 (Gold V)",
+            level: "Gold V",
+            desc: "철수의 토마토 농장에서는 토마토를 보관하는 창고가 있습니다. 익은 토마토(1)의 인접한 곳에 있는 익지 않은 토마토(0)들은 하루가 지나면 익게 됩니다. 창고에 보관된 토마토들이 며칠이 지나면 다 익게 되는지 최소 일수를 구하는 프로그램을 작성하세요.",
+            inSpec: "첫 줄에 M(가로), N(세로)이 주어지고 다음 줄부터 격자 정보가 주어집니다.",
+            outSpec: "모든 토마토가 익는 최소 일수를 출력합니다. 처음부터 다 익었으면 0, 불가능하면 -1을 출력합니다.",
+            cases: [
+                {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"},
+                {in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1"},
+                {in: "2 2\n1 -1\n-1 1", out: "0"},
+                {in: "4 4\n1 0 0 0\n0 0 0 0\n0 0 0 0\n0 0 0 1", out: "3"},
+                {in: "5 5\n-1 1 0 0 0\n0 -1 -1 -1 0\n0 -1 -1 -1 0\n0 -1 -1 -1 0\n0 0 0 0 0", out: "14"}
+            ]
+        },
+        {
+            title: "A + B (Bronze V)",
+            level: "Bronze V",
             desc: "두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.",
             inSpec: "첫째 줄에 A와 B가 주어진다. (0 < A, B < 10)",
             outSpec: "첫째 줄에 A+B를 출력한다.",
-            cases: [{in: "1 2", out: "3"}, {in: "10 20", out: "30"}, {in: "0 5", out: "5"}]
+            cases: Array.from({length: 10}, (_, i) => ({in: `${i} ${i+1}`, out: `${i*2+1}`})) // 자동 생성된 10개 케이스
         }
     ];
-    let activeIdx = -1;
 
-    async function init() {
+    let problems = JSON.parse(localStorage.getItem('judge_db')) || initialProblems;
+    let currentIdx = -1;
+
+    async function loadEngine() {
         pyodide = await loadPyodide();
-        document.getElementById('engineStatus').innerText = "✅ 파이썬 엔진 준비 완료";
-        document.getElementById('submitBtn').disabled = false;
-        renderList();
+        document.getElementById('engineStatus').innerText = "🟢 엔진 준비 완료";
+        document.getElementById('runBtn').disabled = false;
+        renderProblemList();
     }
-    init();
+    loadEngine();
 
-    function renderList() {
+    function renderProblemList() {
         const list = document.getElementById('probList');
         list.innerHTML = problems.map((p, i) => `
-            <div class="prob-link ${activeIdx === i ? 'active' : ''}" onclick="loadProb(${i})">
-                <small class="text-info opacity-50 d-block">Problem ${i+1}</small>
-                ${p.title}
+            <div class="prob-item ${currentIdx === i ? 'active' : ''}" onclick="selectProblem(${i})">
+                <div class="small text-info mb-1">${p.level}</div>
+                <div class="fw-bold">${p.title}</div>
             </div>
         `).join('');
     }
 
-    function loadProb(i) {
-        activeIdx = i;
+    function selectProblem(i) {
+        currentIdx = i;
         const p = problems[i];
         document.getElementById('emptyView').style.display = 'none';
         document.getElementById('probView').style.display = 'block';
         document.getElementById('vTitle').innerText = p.title;
+        document.getElementById('vLevel').innerText = p.level;
         document.getElementById('vDesc').innerText = p.desc;
-        document.getElementById('vInputSpec').innerText = p.inSpec;
-        document.getElementById('vOutputSpec').innerText = p.outSpec;
+        document.getElementById('vInSpec').innerText = p.inSpec;
+        document.getElementById('vOutSpec').innerText = p.outSpec;
         document.getElementById('resultArea').classList.add('d-none');
-        renderList();
+        renderProblemList();
     }
 
-    function saveProblem() {
-        const rawCases = document.getElementById('inCases').value.split('\n');
-        const formattedCases = rawCases.map(line => {
+    function addCustomProblem() {
+        const raw = document.getElementById('mCases').value.split('\n');
+        const cases = raw.map(line => {
             const [i, o] = line.split('|');
             return {in: i.trim(), out: o.trim()};
         });
-
         problems.push({
-            title: document.getElementById('inTitle').value,
-            desc: document.getElementById('inDesc').value,
-            inSpec: document.getElementById('inInSpec').value,
-            outSpec: document.getElementById('inOutSpec').value,
-            cases: formattedCases
+            title: document.getElementById('mTitle').value,
+            level: "Custom",
+            desc: document.getElementById('mDesc').value,
+            inSpec: document.getElementById('mInSpec').value,
+            outSpec: document.getElementById('mOutSpec').value,
+            cases: cases
         });
-
-        localStorage.setItem('boj_data', JSON.stringify(problems));
-        renderList();
+        localStorage.setItem('judge_db', JSON.stringify(problems));
+        renderProblemList();
         bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
     }
 
-    document.getElementById('submitBtn').onclick = async () => {
+    document.getElementById('runBtn').onclick = async () => {
         const code = document.getElementById('codeEditor').value;
-        const p = problems[activeIdx];
-        const resList = document.getElementById('testcaseResults');
-        const resArea = document.getElementById('resultArea');
+        const p = problems[currentIdx];
+        const resList = document.getElementById('caseResults');
         const verdict = document.getElementById('finalVerdict');
-
-        resArea.classList.remove('d-none');
+        
+        document.getElementById('resultArea').classList.remove('d-none');
         resList.innerHTML = "";
         verdict.innerText = "채점 중...";
-        verdict.className = "text-center mt-3 fw-bold text-warning";
+        verdict.className = "text-center mt-4 fw-bold text-warning";
 
         let allPassed = true;
 
         for (let i = 0; i < p.cases.length; i++) {
             const c = p.cases[i];
-            const div = document.createElement('div');
-            div.className = "res-item mb-2";
-            div.innerHTML = `Case #${i+1}: 실행 중...`;
-            resList.appendChild(div);
+            const item = document.createElement('div');
+            item.className = "res-item";
+            item.innerText = `테스트케이스 #${i+1}: 실행 중...`;
+            resList.appendChild(item);
 
             try {
                 pyodide.runPython(`
                     import io, sys
-                    sys.stdin = io.StringIO("${c.in}")
+                    sys.stdin = io.StringIO("${c.in.replace(/\n/g, '\\n')}")
                     sys.stdout = io.StringIO()
                 `);
                 await pyodide.runPythonAsync(code);
                 const out = pyodide.runPython("sys.stdout.getvalue()").trim();
 
-                if (out === c.out) {
-                    div.className = "res-item res-correct";
-                    div.innerHTML = `Case #${i+1}: 맞았습니다!`;
+                if (out === c.out.trim()) {
+                    item.className = "res-item res-correct";
+                    item.innerText = `테스트케이스 #${i+1}: 맞았습니다!`;
                 } else {
-                    div.className = "res-item res-wrong";
-                    div.innerHTML = `Case #${i+1}: 틀렸습니다 (내 출력: ${out} / 정답: ${c.out})`;
+                    item.className = "res-item res-wrong";
+                    item.innerText = `테스트케이스 #${i+1}: 틀렸습니다 (출력: ${out})`;
                     allPassed = false;
                 }
             } catch (e) {
-                div.className = "res-item res-wrong";
-                div.innerHTML = `Case #${i+1}: 에러 (${e.message.split('\n').pop()})`;
+                item.className = "res-item res-wrong";
+                item.innerText = `테스트케이스 #${i+1}: 런타임 에러`;
                 allPassed = false;
             }
         }
 
         if (allPassed) {
             verdict.innerText = "맞았습니다!! 🎉";
-            verdict.className = "text-center mt-3 fw-bold text-success";
+            verdict.className = "text-center mt-4 fw-bold text-success";
         } else {
             verdict.innerText = "틀렸습니다";
-            verdict.className = "text-center mt-3 fw-bold text-danger";
+            verdict.className = "text-center mt-4 fw-bold text-danger";
         }
     };
 
-    function resetCode() {
-        document.getElementById('codeEditor').value = "";
-    }
+    function resetEditor() { document.getElementById('codeEditor').value = ""; }
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
