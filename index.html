@@ -2,104 +2,224 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>나만의 PyPy 채점 연습장</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Code Judge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
     <style>
-        body { background-color: #f8f9fa; padding-top: 30px; }
-        .editor-container { background: #2d2d2d; border-radius: 8px; padding: 15px; }
-        textarea { 
-            width: 100%; height: 300px; 
-            background: transparent; color: #f8f8f2; 
-            border: none; outline: none; font-family: 'Consolas', monospace; font-size: 14px;
+        :root {
+            --glass: rgba(255, 255, 255, 0.03);
+            --bg: #0f172a;
+            --accent: #38bdf8;
+            --card-bg: #1e293b;
         }
-        .problem-box { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .result-box { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; }
+        body { 
+            background-color: var(--bg); 
+            color: #f1f5f9; 
+            font-family: 'Inter', sans-serif; 
+            height: 100vh; margin: 0; display: flex; flex-direction: column;
+        }
+        /* AI 특유의 글로우 디자인 */
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+        .sidebar { height: calc(100vh - 80px); overflow-y: auto; padding: 20px; }
+        .main-panel { height: calc(100vh - 80px); overflow-y: auto; padding: 20px; }
+        
+        /* 에디터 스타일 */
+        .editor-box {
+            background: #000;
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+        textarea {
+            width: 100%; height: 350px;
+            background: transparent; color: #38bdf8;
+            border: none; outline: none;
+            font-family: 'JetBrains Mono', monospace; font-size: 14px;
+        }
+        
+        /* 버튼 디자인 */
+        .btn-ai {
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            border: none; color: white; font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-ai:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4); color: white; }
+        
+        .nav-header { height: 80px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; padding: 0 30px; justify-content: space-between; }
+        .prob-item { cursor: pointer; transition: 0.2s; border: none; background: transparent; color: #94a3b8; text-align: left; width: 100%; padding: 12px; border-radius: 8px; margin-bottom: 5px; }
+        .prob-item:hover, .prob-item.active { background: rgba(56, 189, 248, 0.1); color: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="container">
+<nav class="nav-header">
+    <h4 class="m-0 fw-bold"><i class="bi bi-cpu text-info"></i> AI Judge <span class="fw-light text-muted">v2.0</span></h4>
+    <div id="engineStatus" class="badge bg-dark border border-secondary p-2">엔진 로딩 중...</div>
+</nav>
+
+<div class="container-fluid">
     <div class="row">
-        <div class="col-md-5">
-            <div class="problem-box">
-                <h3>문제 1: A + B</h3>
-                <p class="text-muted">두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.</p>
-                <hr>
-                <h5>예제 입력</h5>
-                <pre class="bg-light p-2">1 2</pre>
-                <h5>예제 출력</h5>
-                <pre class="bg-light p-2">3</pre>
+        <div class="col-md-3 sidebar border-end border-secondary">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-uppercase text-muted fw-bold">Problems</h6>
+                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i></button>
             </div>
-            <div id="status" class="mt-3 text-primary fw-bold">파이썬 엔진 로딩 중... (잠시만 기다려주세요)</div>
+            <div id="probList"></div>
         </div>
 
-        <div class="col-md-7">
-            <div class="editor-container">
-                <textarea id="codeTextarea" spellcheck="false"># 여기에 코드를 입력하세요
-a, b = map(int, input().split())
-print(a + b)</textarea>
+        <div class="col-md-9 main-panel">
+            <div id="emptyView" class="text-center py-5">
+                <i class="bi bi-code-slash display-1 text-secondary mb-4"></i>
+                <h2>문제를 선택하거나 새 문제를 만드세요</h2>
             </div>
-            <button id="runBtn" class="btn btn-success mt-3 w-100" disabled>채점 시작하기</button>
-            
-            <div id="resultBox" class="result-box">
-                <strong>결과:</strong> <span id="resultText"></span>
+
+            <div id="contentView" style="display: none;">
+                <div class="glass-card p-4 mb-4">
+                    <h2 id="viewTitle" class="fw-bold mb-3"></h2>
+                    <p id="viewDesc" class="text-muted fs-5"></p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 rounded bg-dark border border-secondary">
+                                <small class="text-info text-uppercase">Input Example</small>
+                                <pre id="viewIn" class="m-0 mt-2 text-white"></pre>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded bg-dark border border-secondary">
+                                <small class="text-warning text-uppercase">Output Example</small>
+                                <pre id="viewOut" class="m-0 mt-2 text-white"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="editor-box mb-3">
+                    <textarea id="codeEditor" spellcheck="false"># 여기에 파이썬 코드를 작성하세요...</textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button id="runBtn" class="btn btn-ai btn-lg flex-grow-1" disabled>실행 및 채점</button>
+                </div>
+                
+                <div id="resultBox" class="mt-4 p-4 rounded-3 d-none"></div>
             </div>
         </div>
     </div>
 </div>
 
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">새 문제 추가</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">제목</label><input type="text" id="inTitle" class="form-control bg-secondary text-white border-0"></div>
+                <div class="mb-3"><label class="form-label">설명</label><textarea id="inDesc" style="height: 100px;" class="form-control bg-secondary text-white border-0"></textarea></div>
+                <div class="row">
+                    <div class="col-6"><label class="form-label">테스트 입력</label><input type="text" id="inTestIn" class="form-control bg-secondary text-white border-0"></div>
+                    <div class="col-6"><label class="form-label">테스트 출력</label><input type="text" id="inTestOut" class="form-control bg-secondary text-white border-0"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button onclick="addNewProblem()" class="btn btn-info w-100">저장하기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let pyodide;
+    let pyodide = null;
+    let problems = JSON.parse(localStorage.getItem('myProblems')) || [
+        { title: "A + B", desc: "두 정수를 더한 값을 출력하세요.", in: "1 2", out: "3" },
+        { title: "Hello World", desc: "Hello World!를 출력하세요.", in: "", out: "Hello World!" }
+    ];
+    let selectedIdx = -1;
 
-    // 1. 파이썬 환경 준비
-    async function setup() {
+    async function init() {
         pyodide = await loadPyodide();
-        document.getElementById('status').innerText = "✅ 준비 완료!";
+        document.getElementById('engineStatus').innerHTML = "🟢 System Ready";
         document.getElementById('runBtn').disabled = false;
+        renderList();
     }
-    setup();
+    init();
 
-    // 2. 채점 로직
-    async function runJudge() {
-        const code = document.getElementById('codeTextarea').value;
-        const resultBox = document.getElementById('resultBox');
-        const resultText = document.getElementById('resultText');
-        
-        resultBox.style.display = "block";
-        resultBox.className = "result-box bg-warning text-dark";
-        resultText.innerText = "채점 중...";
+    function renderList() {
+        const list = document.getElementById('probList');
+        list.innerHTML = problems.map((p, i) => `
+            <button class="prob-item ${selectedIdx === i ? 'active' : ''}" onclick="selectProb(${i})">
+                <i class="bi bi-file-earmark-code me-2"></i> ${p.title}
+            </button>
+        `).join('');
+    }
+
+    function selectProb(i) {
+        selectedIdx = i;
+        const p = problems[i];
+        document.getElementById('emptyView').style.display = 'none';
+        document.getElementById('contentView').style.display = 'block';
+        document.getElementById('viewTitle').innerText = p.title;
+        document.getElementById('viewDesc').innerText = p.desc;
+        document.getElementById('viewIn').innerText = p.in || "(없음)";
+        document.getElementById('viewOut').innerText = p.out;
+        document.getElementById('resultBox').classList.add('d-none');
+        renderList();
+    }
+
+    function addNewProblem() {
+        const p = {
+            title: document.getElementById('inTitle').value,
+            desc: document.getElementById('inDesc').value,
+            in: document.getElementById('inTestIn').value,
+            out: document.getElementById('inTestOut').value
+        };
+        problems.push(p);
+        localStorage.setItem('myProblems', JSON.stringify(problems));
+        renderList();
+        bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+    }
+
+    document.getElementById('runBtn').onclick = async () => {
+        const code = document.getElementById('codeEditor').value;
+        const p = problems[selectedIdx];
+        const resBox = document.getElementById('resultBox');
+        resBox.className = "mt-4 p-4 rounded-3 text-white bg-secondary";
+        resBox.innerHTML = "<div class='spinner-border spinner-border-sm'></div> AI 엔진 분석 중...";
+        resBox.classList.remove('d-none');
 
         try {
-            // 테스트케이스 설정 (입력값: 1 2)
             pyodide.runPython(`
                 import io, sys
-                sys.stdin = io.StringIO("1 2")
+                sys.stdin = io.StringIO("${p.in}")
                 sys.stdout = io.StringIO()
             `);
-
-            // 코드 실행
             await pyodide.runPythonAsync(code);
+            const userOut = pyodide.runPython("sys.stdout.getvalue()").trim();
 
-            // 결과값 가져오기
-            const output = pyodide.runPython("sys.stdout.getvalue()").trim();
-            
-            // 정답 비교 (정답: 3)
-            if (output === "3") {
-                resultBox.className = "result-box bg-success text-white";
-                resultText.innerText = "맞았습니다!!";
+            if (userOut === p.out.trim()) {
+                resBox.className = "mt-4 p-4 rounded-3 bg-success bg-opacity-25 border border-success text-success";
+                resBox.innerHTML = "<h4><i class='bi bi-check-circle-fill'></i> 맞았습니다!</h4>정답입니다. 효율적인 코드네요!";
             } else {
-                resultBox.className = "result-box bg-danger text-white";
-                resultText.innerText = `틀렸습니다 (내 출력: ${output})`;
+                resBox.className = "mt-4 p-4 rounded-3 bg-danger bg-opacity-25 border border-danger text-danger";
+                resBox.innerHTML = `<h4><i class='bi bi-x-circle-fill'></i> 틀렸습니다</h4>내 출력: <code>${userOut}</code> | 기대값: <code>${p.out}</code>`;
             }
-        } catch (err) {
-            resultBox.className = "result-box bg-dark text-white";
-            resultText.innerText = "에러 발생: " + err.message;
+        } catch (e) {
+            resBox.className = "mt-4 p-4 rounded-3 bg-dark border border-warning text-warning";
+            resBox.innerHTML = `<h4><i class='bi bi-exclamation-triangle'></i> 런타임 에러</h4><small>${e.message}</small>`;
         }
-    }
-
-    document.getElementById('runBtn').onclick = runJudge;
+    };
 </script>
-
 </body>
 </html>
