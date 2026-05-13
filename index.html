@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Pro | Extreme Testcases</title>
+    <title>DevJudge Pro | Debug Mode</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
@@ -16,15 +16,21 @@
         .prob-item.active { background: #1f6feb33; border-color: #1f6feb; color: var(--accent); }
         #editor { height: 450px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
         .verdict { font-size: 2rem; font-weight: 900; text-align: center; margin-top: 15px; }
-        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; }
+        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; overflow-x: auto; white-space: pre-wrap;}
         .progress { height: 12px; background: #30363d; margin: 20px 0; display: none; border-radius: 10px; }
         .limit-tag { font-size: 0.85rem; color: #ff7b72; border: 1px solid rgba(255,123,114,0.3); padding: 4px 10px; border-radius: 20px; background: rgba(255,123,114,0.1); }
+        
+        /* 오답 리포트 디자인 */
+        .report-card { border: 1px solid #f85149; border-radius: 8px; background: #161b22; margin-top: 20px; display: none; }
+        .report-header { background: rgba(248, 81, 73, 0.1); color: #ff7b72; padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #f85149; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+        .report-body { padding: 15px; }
+        .report-pre { max-height: 150px; overflow-y: auto; background: #010409; color: #c9d1d9; border: 1px solid #30363d; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
-    <h4 class="m-0 fw-bold text-primary">DevJudge <span class="text-danger">EXTREME</span></h4>
+    <h4 class="m-0 fw-bold text-primary">DevJudge <span class="text-white">PRO</span></h4>
     <div id="status" class="text-warning fw-bold">Python 엔진 부팅 중...</div>
 </div>
 
@@ -48,7 +54,26 @@
             <div id="editor"></div>
             <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"></div></div>
             <div id="vResult" class="verdict"></div>
-            <button id="sBtn" class="btn btn-danger btn-lg w-100 py-3 mt-2 fw-bold" disabled onclick="runFullJudge()">엄격한 채점 시작</button>
+            
+            <div id="errorReport" class="report-card">
+                <div id="reportHeader" class="report-header">오답 상세 리포트</div>
+                <div class="report-body">
+                    <h6 class="text-info fw-bold">입력 데이터 (Input)</h6>
+                    <pre id="reportIn" class="report-pre"></pre>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <h6 class="text-success fw-bold">기대한 정답 (Expected)</h6>
+                            <pre id="reportExp" class="report-pre text-success"></pre>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-danger fw-bold">내 출력 (Actual)</h6>
+                            <pre id="reportAct" class="report-pre text-danger"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="sBtn" class="btn btn-danger btn-lg w-100 py-3 mt-4 fw-bold" disabled onclick="runFullJudge()">엄격한 채점 시작</button>
         </div>
     </div>
 </div>
@@ -56,7 +81,6 @@
 <script>
     let pyodide, editor, activeIdx = -1;
     
-    // 런타임에 거대한 테스트케이스들을 동적으로 생성 (브라우저 스토리지 폭발 방지)
     function generateExtremeCases() {
         let cases = [
             {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"},
@@ -64,7 +88,6 @@
             {in: "2 2\n1 -1\n-1 1", out: "0"}
         ];
 
-        // 1. 중간 사이즈 여러 개 (정확도 테스트)
         for(let i=10; i<=50; i+=10) {
             cases.push({
                 in: `${i} 2\n${"0 ".repeat(i-1)}1\n${"0 ".repeat(i)}`.trim(), 
@@ -72,23 +95,20 @@
             });
         }
 
-        // 2. 극한 사이즈 (1000 x 1000 = 1,000,000 칸) -> 시간초과/메모리초과 유도용
         const MAX = 1000;
         let maxRow0 = "1 " + "0 ".repeat(MAX - 1).trim();
         let maxRowOther = "0 ".repeat(MAX).trim();
         cases.push({
             in: `${MAX} ${MAX}\n` + maxRow0 + ("\n" + maxRowOther).repeat(MAX - 1),
-            out: `${MAX + MAX - 2}` // (1000-1) + (1000-1) = 1998일
+            out: `${MAX + MAX - 2}`
         });
 
-        // 3. 극한 사이즈 (모두 이미 익음)
         let allRipeRow = "1 ".repeat(MAX).trim();
         cases.push({
             in: `${MAX} ${MAX}\n` + ("\n" + allRipeRow).repeat(MAX),
             out: "0"
         });
 
-        // 4. 극한 사이즈 (1칸 때문에 불가능)
         let impRow = "1 " + "-1 " + "0 ".repeat(MAX - 2).trim();
         cases.push({
             in: `${MAX} ${MAX}\n` + impRow + ("\n" + maxRowOther).repeat(MAX - 1),
@@ -101,15 +121,15 @@
     const probs = [
         { 
             title: "토마토 (Gold V - Extreme)", 
-            desc: "철수의 창고는 이제 최대 1,000 x 1,000 크기를 가질 수 있습니다. 당신의 BFS 로직이 불필요한 반복이나 메모리 누수 없이 2초 안에 100만 개의 칸을 탐색할 수 있는지 증명하세요.", 
-            cases: generateExtremeCases() // RAM에서 즉시 생성
+            desc: "철수의 창고는 이제 최대 1,000 x 1,000 크기를 가질 수 있습니다. 당신의 코드가 2초 안에 100만 개의 칸을 탐색할 수 있는지 증명하세요.", 
+            cases: generateExtremeCases()
         }
     ];
 
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
     require(['vs/editor/editor.main'], function() {
         editor = monaco.editor.create(document.getElementById('editor'), {
-            value: "# 극한의 테스트케이스에 도전하세요.\n", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 15,
+            value: "# 오답을 유도해 리포트를 확인해보세요.\n", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 15,
             autoClosingBrackets: 'always', minimap: { enabled: false }
         });
     });
@@ -139,7 +159,17 @@
         document.getElementById('vTitle').innerText = p.title;
         document.getElementById('vDesc').innerText = p.desc;
         document.getElementById('vResult').innerText = "";
+        document.getElementById('errorReport').style.display = 'none'; // 문제 변경시 리포트 숨김
         renderList();
+    }
+
+    // 브라우저 폭발 방지를 위한 문자열 자르기 함수
+    function truncateText(text, maxLength = 500) {
+        if (!text) return "출력 없음";
+        if (text.length > maxLength) {
+            return text.substring(0, maxLength) + "\n\n... (데이터가 너무 길어 생략되었습니다)";
+        }
+        return text;
     }
 
     async function runFullJudge() {
@@ -147,8 +177,10 @@
         const p = probs[activeIdx];
         const bar = document.getElementById('pBar');
         const res = document.getElementById('vResult');
+        const report = document.getElementById('errorReport');
         
         document.querySelector('.progress').style.display = 'block';
+        report.style.display = 'none'; // 채점 시작시 리포트 숨김
         bar.style.width = '0%';
         res.innerText = "채점 중...";
         res.className = "verdict text-warning";
@@ -157,7 +189,6 @@
             const c = p.cases[i];
             
             try {
-                // 파이썬 실행 코드
                 let pyRunner = `
 import sys, io
 sys.stdin = io.StringIO("""${c.in}""")
@@ -173,7 +204,6 @@ except EOFError:
 sys.stdout.getvalue().strip()
                 `;
                 
-                // ⏳ 엄격한 시간 제한 적용 (2.0초)
                 const runCode = pyodide.runPythonAsync(pyRunner);
                 const timeout = new Promise((_, reject) => 
                     setTimeout(() => reject(new Error("Time Limit Exceeded")), 2000)
@@ -188,6 +218,13 @@ sys.stdout.getvalue().strip()
                 } else {
                     res.innerText = `틀렸습니다 (케이스 #${i+1})`;
                     res.className = "verdict text-danger";
+                    
+                    // 🔥 틀렸을 때 오답 리포트 표시
+                    report.style.display = 'block';
+                    document.getElementById('reportHeader').innerText = `오답 상세 리포트 (케이스 #${i+1})`;
+                    document.getElementById('reportIn').innerText = truncateText(c.in, 1000);
+                    document.getElementById('reportExp').innerText = truncateText(c.out, 500);
+                    document.getElementById('reportAct').innerText = truncateText(output, 500);
                     return;
                 }
             } catch (e) {
@@ -195,7 +232,13 @@ sys.stdout.getvalue().strip()
                     res.innerText = `시간 초과 (TLE) - 케이스 #${i+1}`;
                 } else {
                     res.innerText = `런타임 에러 (MLE/RE) - 케이스 #${i+1}`;
-                    console.error(e);
+                    
+                    // 에러가 났을 때도 리포트 표시
+                    report.style.display = 'block';
+                    document.getElementById('reportHeader').innerText = `에러 상세 리포트 (케이스 #${i+1})`;
+                    document.getElementById('reportIn').innerText = truncateText(c.in, 1000);
+                    document.getElementById('reportExp').innerText = "에러 없이 " + truncateText(c.out, 50) + " 출력 필요";
+                    document.getElementById('reportAct').innerText = truncateText(e.message || e.toString(), 500);
                 }
                 res.className = "verdict text-danger";
                 return;
