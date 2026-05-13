@@ -2,196 +2,146 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Ultra | 50+ Testcases Enabled</title>
+    <title>DevJudge Ultra v5 | Standard Edition</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
-
     <style>
-        :root { --bg: #0d1117; --sidebar: #161b22; --card: #21262d; --border: #30363d; --accent: #58a6ff; --text: #c9d1d9; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
-        .top-nav { height: 60px; background: var(--sidebar); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; }
-        .layout-body { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 320px; background: var(--sidebar); border-right: 1px solid var(--border); overflow-y: auto; padding: 20px; }
-        .main-content { flex: 1; overflow-y: auto; padding: 40px; }
-        .prob-item { cursor: pointer; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid transparent; transition: 0.2s; }
-        .prob-item:hover { background: #30363d; }
-        .prob-item.active { background: #1f6feb33; border-color: #1f6feb; }
-        .glass-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 25px; margin-bottom: 30px; }
-        .limit-tag { font-size: 0.85rem; color: var(--accent); margin-right: 15px; background: rgba(88, 166, 255, 0.1); padding: 4px 10px; border-radius: 20px; }
-        #editorContainer { height: 400px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
-        .progress-section { display: none; margin: 20px 0; }
-        .progress { height: 12px; background: #30363d; border-radius: 6px; }
-        .verdict-text { font-size: 1.8rem; font-weight: 800; text-align: center; margin-top: 15px; }
-        pre { background: #010409; color: #7ee787; border: 1px solid var(--border); padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 0.85rem; }
-        .btn-submit { background: #238636; border: none; color: white; font-weight: bold; padding: 15px; border-radius: 6px; width: 100%; font-size: 1.1rem; }
-        .btn-submit:disabled { background: #161b22; color: #484f58; }
+        :root { --bg: #0d1117; --sidebar: #161b22; --border: #30363d; --accent: #58a6ff; }
+        body { background: var(--bg); color: #c9d1d9; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .layout { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; }
+        .main { flex: 1; padding: 40px; overflow-y: auto; }
+        .prob-item { cursor: pointer; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid transparent; }
+        .prob-item.active { background: #1f6feb33; border-color: #1f6feb; color: var(--accent); }
+        #editor { height: 400px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
+        .verdict { font-size: 2rem; font-weight: 800; text-align: center; margin-top: 20px; }
+        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .progress { height: 10px; background: #30363d; margin: 20px 0; display: none; }
     </style>
 </head>
 <body>
 
-<nav class="top-nav">
-    <div class="fw-bold fs-4 text-white"><i class="bi bi-cpu-fill text-primary me-2"></i>DevJudge <span class="fw-light opacity-50">v4.1</span></div>
-    <div id="engineStatus" class="small text-warning">System Booting...</div>
-</nav>
+<div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center">
+    <h4 class="m-0 fw-bold text-primary">DevJudge <span class="text-white opacity-50">PRO</span></h4>
+    <div id="status" class="text-warning small">엔진 준비 중...</div>
+</div>
 
-<div class="layout-body">
+<div class="layout">
     <div class="sidebar">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h6 class="text-uppercase fw-bold text-muted small m-0">Problem Set</h6>
-            <button class="btn btn-sm btn-outline-primary" onclick="localStorage.clear(); location.reload();">초기화</button>
-        </div>
+        <button class="btn btn-sm btn-outline-danger w-100 mb-3" onclick="localStorage.clear(); location.reload();">데이터 초기화</button>
         <div id="probList"></div>
     </div>
-
-    <div class="main-content">
-        <div id="emptyMsg" class="text-center py-5 mt-5"><h2 class="text-muted opacity-25">문제를 선택하여 테스트를 시작하세요</h2></div>
-        <div id="problemDetail" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 id="vTitle" class="fw-bold text-white"></h2>
-                <div>
-                    <span class="limit-tag"><i class="bi bi-clock"></i> <span id="vTime"></span>s</span>
-                    <span class="limit-tag"><i class="bi bi-cpu"></i> <span id="vMem"></span>MB</span>
-                </div>
+    <div class="main">
+        <div id="probContent" style="display:none;">
+            <h2 id="vTitle" class="fw-bold text-white"></h2>
+            <p id="vDesc" class="mt-3" style="white-space: pre-wrap;"></p>
+            <div class="row mt-4">
+                <div class="col-6"><h6>입력 예시</h6><pre id="vIn"></pre></div>
+                <div class="col-6"><h6>출력 예시</h6><pre id="vOut"></pre></div>
             </div>
-            <div class="glass-card">
-                <p id="vDesc" style="white-space: pre-wrap; color: #e6edf3;"></p>
-                <div class="row mt-4">
-                    <div class="col-6"><h6>Input Example</h6><pre id="vIn"></pre></div>
-                    <div class="col-6"><h6>Output Example</h6><pre id="vOut"></pre></div>
-                </div>
-            </div>
-            <div id="editorContainer"></div>
-            <div class="progress-section" id="judgeUI">
-                <div class="progress"><div id="judgeBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div></div>
-                <div id="verdict" class="verdict-text"></div>
-            </div>
-            <button id="submitBtn" class="btn btn-submit mt-3" disabled onclick="startJudge()">제출 및 전체 채점 실행</button>
+            <div id="editor"></div>
+            <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated"></div></div>
+            <div id="vResult" class="verdict"></div>
+            <button id="sBtn" class="btn btn-primary btn-lg w-100 py-3 mt-3 fw-bold" disabled onclick="runFullJudge()">제출 및 채점</button>
         </div>
     </div>
 </div>
 
 <script>
     let pyodide, editor, activeIdx = -1;
-
-    // 대량 테스트 케이스 생성기 (토마토 문제 전용)
-    function generateTomatoCases() {
-        const cases = [
-            {in: "2 2\n1 -1\n-1 1", out: "0"},
-            {in: "3 3\n0 0 0\n0 0 0\n0 0 0", out: "-1"},
-            {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"}
+    
+    // 50개 이상의 테스트케이스 자동 생성
+    function getTomatoData() {
+        let c = [
+            {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"},
+            {in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1"},
+            {in: "2 2\n1 -1\n-1 1", out: "0"}
         ];
-        // 50개를 채우기 위한 다양한 랜덤/패턴 케이스 추가 로직
-        for(let i=5; i<=55; i++) {
-            cases.push({in: `${i} 2\n${"0 ".repeat(i-1)}1\n${"0 ".repeat(i)}`.trim(), out: `${i-1}`});
-        }
-        return cases;
+        for(let i=1; i<=50; i++) c.push({in: `${i+2} 2\n${"0 ".repeat(i+1)}1\n${"0 ".repeat(i+2)}`.trim(), out: `${i+1}`});
+        return c;
     }
 
-    const initialProblems = [
-        {
-            title: "토마토 (Gold V)",
-            desc: "철수의 토마토 농장 창고에는 토마토들이 격자 모양 상자에 보관되어 있다. 익은 토마토(1)의 인접한 곳에 있는 익지 않은 토마토(0)들은 하루가 지나면 익게 된다. 상자의 토마토들이 다 익게 되는 최소 일수를 구하라. -1은 빈 공간이다.",
-            timeLimit: 2, memLimit: 128,
-            cases: generateTomatoCases() // 여기서 50개 이상 자동 생성
-        },
-        {
-            title: "A + B",
-            desc: "두 정수 A와 B를 입력받아 합을 출력하시오.",
-            timeLimit: 1, memLimit: 128,
-            cases: Array.from({length: 50}, (_, i) => ({in: `${i} ${i*2}`, out: `${i*3}`}))
-        }
+    const probs = [
+        { title: "토마토 (Gold V)", desc: "익은 토마토(1) 주변의 안 익은 토마토(0)들이 익어가는 최소 일수를 구하세요.", in: "6 4\n...", out: "8", cases: getTomatoData() },
+        { title: "A + B", desc: "A와 B의 합을 구하세요.", in: "1 2", out: "3", cases: [{in:"1 2", out:"3"}, {in:"10 20", out:"30"}] }
     ];
 
-    let problems = JSON.parse(localStorage.getItem('dev_judge_v5')) || initialProblems;
-
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
-    require(['vs/editor/editor.main'], function () {
-        editor = monaco.editor.create(document.getElementById('editorContainer'), {
-            value: "# 친구의 새 언어를 위한 로직을 작성하세요\n", language: 'python', theme: 'vs-dark', automaticLayout: true,
-            autoClosingBrackets: 'always', fontSize: 15, minimap: { enabled: false }
+    require(['vs/editor/editor.main'], function() {
+        editor = monaco.editor.create(document.getElementById('editor'), {
+            value: "", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 14
         });
     });
 
     async function init() {
         pyodide = await loadPyodide();
-        document.getElementById('engineStatus').innerText = "✅ Engine Online";
-        document.getElementById('engineStatus').className = "small text-success";
-        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('status').innerText = "✅ 시스템 준비 완료";
+        document.getElementById('sBtn').disabled = false;
         renderList();
     }
     init();
 
     function renderList() {
-        const list = document.getElementById('probList');
-        list.innerHTML = problems.map((p, i) => `
-            <div class="prob-item ${activeIdx === i ? 'active' : ''}" onclick="loadProblem(${i})">
-                <h6 class="fw-bold text-white">${p.title}</h6>
-                <small class="text-info">${p.cases.length} Test Cases Loaded</small>
-            </div>
-        `).join('');
+        document.getElementById('probList').innerHTML = probs.map((p, i) => 
+            `<div class="prob-item ${activeIdx===i?'active':''}" onclick="loadProb(${i})">${p.title}<br><small class="opacity-50">${p.cases.length} Cases</small></div>`
+        ).join('');
     }
 
-    function loadProblem(i) {
+    function loadProb(i) {
         activeIdx = i;
-        const p = problems[i];
-        document.getElementById('emptyMsg').style.display = 'none';
-        document.getElementById('problemDetail').style.display = 'block';
+        const p = probs[i];
+        document.getElementById('probContent').style.display = 'block';
         document.getElementById('vTitle').innerText = p.title;
         document.getElementById('vDesc').innerText = p.desc;
-        document.getElementById('vTime').innerText = p.timeLimit;
-        document.getElementById('vMem').innerText = p.memLimit;
         document.getElementById('vIn').innerText = p.cases[0].in;
         document.getElementById('vOut').innerText = p.cases[0].out;
-        document.getElementById('judgeUI').style.display = 'none';
+        document.getElementById('vResult').innerText = "";
         renderList();
     }
 
-    async function startJudge() {
+    async function runFullJudge() {
         const code = editor.getValue();
-        const p = problems[activeIdx];
-        const ui = document.getElementById('judgeUI');
-        const bar = document.getElementById('judgeBar');
-        const verdict = document.getElementById('verdict');
-
-        ui.style.display = 'block';
+        const p = probs[activeIdx];
+        const bar = document.getElementById('pBar');
+        const res = document.getElementById('vResult');
+        
+        document.querySelector('.progress').style.display = 'block';
         bar.style.width = '0%';
-        verdict.innerText = `채점 시작 (0 / ${p.cases.length})`;
-        verdict.className = "verdict-text text-warning";
+        res.innerText = "채점 중...";
+        res.className = "verdict text-warning";
 
-        let passed = 0;
-        const total = p.cases.length;
-
-        for (let i = 0; i < total; i++) {
+        for (let i = 0; i < p.cases.length; i++) {
             const c = p.cases[i];
             try {
-                const run = async () => {
-                    pyodide.runPython(`import io, sys\nsys.stdin = io.StringIO("${c.in.replace(/\n/g, '\\n')}")\nsys.stdout = io.StringIO()`);
-                    await pyodide.runPythonAsync(code);
-                    return pyodide.runPython("sys.stdout.getvalue()").trim();
-                };
-                const timeout = new Promise((_, r) => setTimeout(() => r(new Error("TLE")), p.timeLimit * 1000));
-                const res = await Promise.race([run(), timeout]);
+                // 핵심: 매 케이스마다 전역 변수(Globals)를 완전히 비워버림
+                await pyodide.runPythonAsync(`
+                    import sys, io
+                    for name in list(globals().keys()):
+                        if not name.startswith("__"): del globals()[name]
+                    sys.stdin = io.StringIO("${c.in.replace(/\n/g, '\\n')}")
+                    sys.stdout = io.StringIO()
+                `);
+                
+                await pyodide.runPythonAsync(code);
+                const userOut = pyodide.runPython("sys.stdout.getvalue()").trim();
 
-                if (res === c.out) {
-                    passed++;
-                    let pct = Math.floor((passed / total) * 100);
+                if (userOut === c.out.trim()) {
+                    let pct = Math.floor(((i + 1) / p.cases.length) * 100);
                     bar.style.width = pct + '%';
-                    verdict.innerText = `채점 중... (${passed} / ${total})`;
+                    res.innerText = `채점 중... (${i+1}/${p.cases.length})`;
                 } else {
-                    verdict.innerText = `틀렸습니다 (Case #${i+1})`;
-                    verdict.className = "verdict-text text-danger"; return;
+                    res.innerText = `틀렸습니다 (Case #${i+1})`;
+                    res.className = "verdict text-danger"; return;
                 }
             } catch (e) {
-                verdict.innerText = e.message === "TLE" ? "시간 초과 (Time Limit Exceeded)" : "런타임 에러";
-                verdict.className = "verdict-text text-danger"; return;
+                res.innerText = "에러 발생";
+                res.className = "verdict text-danger"; return;
             }
         }
-        verdict.innerText = "맞았습니다!! 🎉";
-        verdict.className = "verdict-text text-success";
+        res.innerText = "맞았습니다!! 🎉";
+        res.className = "verdict text-success";
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
