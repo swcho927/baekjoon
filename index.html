@@ -81,39 +81,102 @@
 <script>
     let pyodide, editor, activeIdx = -1;
     
-    function generateExtremeCases() {
-        let cases = [
-            {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"},
-            {in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1"},
-            {in: "2 2\n1 -1\n-1 1", out: "0"}
-        ];
+function generateExtremeCases() {
+        let cases = [];
 
-        for(let i=10; i<=50; i+=10) {
-            cases.push({
-                in: `${i} 2\n${"0 ".repeat(i-1)}1\n${"0 ".repeat(i)}`.trim(), 
-                out: `${i-1}`
-            });
+        // 🏆 1. 완벽하게 검증된 정답 생성기 (Reference Solver)
+        function solve(M, N, boardStr) {
+            let board = boardStr.split('\n').map(r => r.split(' ').map(Number));
+            let q = [];
+            let unripe = 0;
+            for(let i=0; i<N; i++) {
+                for(let j=0; j<M; j++) {
+                    if(board[i][j] === 1) q.push([j, i, 0]);
+                    else if(board[i][j] === 0) unripe++;
+                }
+            }
+            if(unripe === 0) return 0; // 이미 다 익음
+
+            let head = 0, days = 0; // shift() 대신 head 인덱스를 써서 O(1) 성능 유지
+            let dx = [1, -1, 0, 0], dy = [0, 0, 1, -1];
+
+            while(head < q.length) {
+                let curr = q[head++];
+                let x = curr[0], y = curr[1], d = curr[2];
+                days = d;
+                for(let k=0; k<4; k++) {
+                    let nx = x + dx[k], ny = y + dy[k];
+                    if(nx >= 0 && nx < M && ny >= 0 && ny < N && board[ny][nx] === 0) {
+                        board[ny][nx] = 1;
+                        unripe--;
+                        q.push([nx, ny, d + 1]);
+                    }
+                }
+            }
+            return unripe === 0 ? days : -1;
         }
 
+        function addCase(M, N, boardStr) {
+            let ans = solve(M, N, boardStr);
+            cases.push({ in: `${M} ${N}\n${boardStr}`, out: `${ans}` });
+        }
+
+        // 🎯 2. 크기가 작은 엣지 케이스 (경계값)
+        addCase(2, 2, "1 1\n1 1");   // 이미 다 익은 최소 크기
+        addCase(2, 2, "0 0\n0 0");   // 토마토가 없어서 불가능한 경우 (-1)
+        addCase(2, 2, "1 -1\n-1 0"); // 벽에 막혀서 영원히 안 익는 경우 (-1)
+
+        // 🎲 3. 크기가 점점 커지는 무작위 하드코어 맵 (10x10 ~ 100x100)
+        for(let size = 10; size <= 100; size += 15) {
+            let M = size, N = size;
+            let board = [];
+            let hasRipe = false;
+            
+            for(let i=0; i<N; i++) {
+                let row = [];
+                for(let j=0; j<M; j++) {
+                    let r = Math.random();
+                    if(r < 0.05) { row.push(1); hasRipe = true; } // 5% 확률로 익은 토마토
+                    else if(r < 0.25) row.push(-1);               // 20% 확률로 벽
+                    else row.push(0);                             // 75% 안 익은 토마토
+                }
+                board.push(row.join(' '));
+            }
+            // 익은 토마토가 하나도 없으면 강제로 하나 추가
+            if(!hasRipe) {
+                let rArr = board[0].split(' ');
+                rArr[0] = "1";
+                board[0] = rArr.join(' ');
+            }
+            addCase(M, N, board.join('\n'));
+        }
+
+        // 🔥 4. 극한의 1000 x 1000 케이스 (시간 및 메모리 제한 테스트)
         const MAX = 1000;
-        let maxRow0 = "1 " + "0 ".repeat(MAX - 1).trim();
-        let maxRowOther = "0 ".repeat(MAX).trim();
-        cases.push({
-            in: `${MAX} ${MAX}\n` + maxRow0 + ("\n" + maxRowOther).repeat(MAX - 1),
-            out: `${MAX + MAX - 2}`
-        });
+        
+        // 극한 1: 왼쪽 위부터 오른쪽 아래까지 뻥 뚫린 최장 거리
+        let ext1 = [];
+        for(let i=0; i<MAX; i++) {
+            if(i === 0) ext1.push("1 " + "0 ".repeat(MAX-1).trim());
+            else ext1.push("0 ".repeat(MAX).trim());
+        }
+        cases.push({ in: `${MAX} ${MAX}\n${ext1.join('\n')}`, out: `${MAX + MAX - 2}` });
 
-        let allRipeRow = "1 ".repeat(MAX).trim();
-        cases.push({
-            in: `${MAX} ${MAX}\n` + ("\n" + allRipeRow).repeat(MAX),
-            out: "0"
-        });
+        // 극한 2: 100만 칸 중 딱 한 칸이 벽에 갇힌 경우 (불가능 체크)
+        let ext2 = [];
+        for(let i=0; i<MAX; i++) {
+            let row = Array(MAX).fill(0);
+            if(i === 0) row[0] = 1;
+            // 맨 오른쪽 아래 구석을 벽(-1)으로 완벽히 가둬버림
+            if(i === MAX-2) row[MAX-1] = -1;
+            if(i === MAX-1) row[MAX-2] = -1;
+            ext2.push(row.join(' '));
+        }
+        cases.push({ in: `${MAX} ${MAX}\n${ext2.join('\n')}`, out: "-1" });
 
-        let impRow = "1 " + "-1 " + "0 ".repeat(MAX - 2).trim();
-        cases.push({
-            in: `${MAX} ${MAX}\n` + impRow + ("\n" + maxRowOther).repeat(MAX - 1),
-            out: "-1"
-        });
+        // 극한 3: 이미 전부 익어 있는 100만 칸 (탐색 로직 낭비 체크)
+        let ext3 = Array(MAX).fill("1 ".repeat(MAX).trim());
+        cases.push({ in: `${MAX} ${MAX}\n${ext3.join('\n')}`, out: "0" });
 
         return cases;
     }
