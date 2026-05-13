@@ -38,6 +38,7 @@
             color: var(--accent-blue) !important;
             font-weight: 800;
             font-size: 1.5rem;
+            letter-spacing: 1px;
         }
 
         .container { max-width: 1100px; padding: 40px 20px; }
@@ -70,6 +71,7 @@
             padding: 15px;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
+            font-weight: bold;
         }
 
         /* 섹션 스타일 */
@@ -139,7 +141,7 @@
             transition: 0.2s;
         }
         .btn-submit:hover { background-color: #388bfd; }
-        .btn-submit:disabled { background-color: #21262d; color: #8b949e; }
+        .btn-submit:disabled { background-color: #21262d; color: #8b949e; cursor: not-allowed; }
 
         /* 결과 창 */
         .result-display {
@@ -151,9 +153,9 @@
             font-weight: 800;
             display: none;
         }
-        .res-judging { color: #e3b341; background: rgba(227, 179, 65, 0.1); }
-        .res-success { color: #3fb950; background: rgba(63, 185, 80, 0.1); }
-        .res-fail { color: #f85149; background: rgba(248, 81, 73, 0.1); }
+        .res-judging { color: #e3b341; background: rgba(227, 179, 65, 0.1); border: 1px solid rgba(227, 179, 65, 0.3); }
+        .res-success { color: #3fb950; background: rgba(63, 185, 80, 0.1); border: 1px solid rgba(63, 185, 80, 0.3); }
+        .res-fail { color: #f85149; background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); }
     </style>
 </head>
 <body>
@@ -170,10 +172,10 @@
 
     <table class="info-table">
         <thead>
-            <tr><th>시간 제한</th><th>메모리 제한</th><th>제출</th><th>정답</th></tr>
+            <tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr>
         </thead>
         <tbody>
-            <tr><td>1 초</td><td>256 MB</td><td>182,431</td><td>68,102</td></tr>
+            <tr><td>2 초</td><td>256 MB</td><td id="tcCountUI">생성 중...</td><td>100 점</td></tr>
         </tbody>
     </table>
 
@@ -209,14 +211,14 @@
 
     <div class="submit-section">
         <h3 style="color: white; font-weight: 700; margin-bottom: 5px;">Source Code</h3>
-        <p class="text-muted">언어: Python 3 (Pyodide v0.25.0)</p>
+        <p class="text-muted">언어: Python 3 (Pyodide v0.25.0) | <span class="text-danger">주의: 1000x1000 극단적 엣지 케이스 포함</span></p>
         
         <div id="editor"></div>
         
-        <button id="sBtn" class="btn-submit w-100" onclick="submitCode()" disabled>서버 로딩 중...</button>
+        <button id="sBtn" class="btn-submit w-100" onclick="submitCode()" disabled>서버 로딩 및 케이스 생성 중...</button>
         
         <div id="resultBox" class="result-display"></div>
-        <div id="errorLog" style="display:none; margin-top:20px; padding:15px; background:#21262d; border:1px solid #f85149; color:#f85149; border-radius:6px; font-family: monospace;"></div>
+        <div id="errorLog" style="display:none; margin-top:20px; padding:15px; background:#21262d; border:1px solid #f85149; color:#f85149; border-radius:6px; font-family: monospace; white-space: pre-wrap;"></div>
     </div>
 </div>
 
@@ -224,28 +226,90 @@
     let editor, pyodide;
     let pyodideReady = false;
 
-    // 테스트 케이스 (토마토 전용)
-    const testCases = [
-        { in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8" },
-        { in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1" },
-        { in: "2 2\n1 1\n1 1", out: "0" }
-    ];
+    // 🔥 디렉터님 지시: 100개 이상의 점진적/극단적 테스트 케이스 동적 생성 로직
+    const testCases = [];
+
+    function generateMassiveTestCases() {
+        // 1. 기초 및 엣지 케이스 (수동)
+        testCases.push({ in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8" });
+        testCases.push({ in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1" });
+        testCases.push({ in: "2 2\n1 1\n1 1", out: "0" });
+        testCases.push({ in: "2 2\n0 0\n0 0", out: "-1" }); // 익은게 아예 없음
+        testCases.push({ in: "2 2\n1 -1\n-1 0", out: "-1" }); // 도달 불가
+        testCases.push({ in: "3 3\n-1 -1 -1\n-1 -1 -1\n-1 -1 -1", out: "0" }); // 빈칸만 있음
+
+        // 2. 점진적 사이즈 업 (3x3 부터 32x32 까지 매번 3가지 패턴 생성 = 90개 케이스)
+        for(let size = 3; size <= 32; size++) {
+            // 패턴 A: 이미 다 익은 경우
+            let allRipe = Array(size).fill(Array(size).fill(1).join(" ")).join("\n");
+            testCases.push({ in: `${size} ${size}\n${allRipe}`, out: "0" });
+            
+            // 패턴 B: 철저히 고립된 경우 (0,0만 익음)
+            let blocked = [];
+            for(let i=0; i<size; i++) {
+                let row = [];
+                for(let j=0; j<size; j++) {
+                    if(i===0 && j===0) row.push(1);
+                    else if((i===0 && j===1) || (i===1 && j===0)) row.push(-1);
+                    else row.push(0);
+                }
+                blocked.push(row.join(" "));
+            }
+            testCases.push({ in: `${size} ${size}\n${blocked.join("\n")}`, out: "-1" });
+
+            // 패턴 C: 최장 거리 (좌상단에서 우하단까지 장애물 없이 끝까지 퍼짐)
+            let maxDist = [];
+            for(let i=0; i<size; i++) {
+                let row = new Array(size).fill(0);
+                if(i===0) row[0] = 1;
+                maxDist.push(row.join(" "));
+            }
+            testCases.push({ in: `${size} ${size}\n${maxDist.join("\n")}`, out: `${(size-1)*2}` });
+        }
+
+        // 3. 초대형 극단적 케이스 (500x500, 1000x1000) - 큐(Queue)가 아닌 일반 리스트 쓰면 무조건 시간초과 나도록 유도
+        [500, 1000].forEach(size => {
+            let giantMaxDist = [];
+            for(let i=0; i<size; i++) {
+                let row = new Array(size).fill(0);
+                if(i===0) row[0] = 1;
+                giantMaxDist.push(row.join(" "));
+            }
+            testCases.push({ in: `${size} ${size}\n${giantMaxDist.join("\n")}`, out: `${(size-1)*2}` });
+
+            let giantBlocked = [];
+            for(let i=0; i<size; i++) {
+                let row = new Array(size).fill(0);
+                if(i===0) { row[0] = 1; row[1] = -1; }
+                if(i===1) { row[0] = -1; }
+                giantBlocked.push(row.join(" "));
+            }
+            testCases.push({ in: `${size} ${size}\n${giantBlocked.join("\n")}`, out: "-1" });
+        });
+
+        document.getElementById('tcCountUI').innerText = `총 ${testCases.length}개`;
+    }
 
     async function initEngine() {
+        generateMassiveTestCases(); // 케이스 무한 생성 실행
+
         try {
             pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" });
             pyodideReady = true;
             const btn = document.getElementById('sBtn');
             btn.innerText = "제출 및 채점 시작";
             btn.disabled = false;
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error(e);
+            document.getElementById('sBtn').innerText = "엔진 로딩 실패 (새로고침 요망)";
+        }
     }
     initEngine();
 
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
     require(['vs/editor/editor.main'], function() {
         editor = monaco.editor.create(document.getElementById('editor'), {
-            value: "import sys\nfrom collections import deque\n\n# 여기에 코드를 작성하세요\n",
+            value: "import sys\nfrom collections import deque\ninput = sys.stdin.readline\n\n# 1000x1000 케이스를 뚫기 위해선 deque를 사용한 최적화가 필수입니다.\n",
             language: 'python',
             theme: 'vs-dark',
             automaticLayout: true,
@@ -269,13 +333,18 @@
 
         for (let i = 0; i < testCases.length; i++) {
             const c = testCases[i];
-            let pct = Math.floor((i / testCases.length) * 100);
-            resBox.innerText = `채점 중 (${pct}%)`;
-            await new Promise(r => setTimeout(r, 100));
+            
+            // UI 업데이트 렌더링을 위한 딜레이 (브라우저 뻗음 방지)
+            if (i % 3 === 0 || i === testCases.length - 1) {
+                let pct = Math.floor((i / testCases.length) * 100);
+                resBox.innerText = `채점 중 (${pct}%)`;
+                await new Promise(r => setTimeout(r, 10));
+            }
 
             try {
                 pyodide.globals.set("user_code", userCode);
                 pyodide.globals.set("input_data", c.in);
+                
                 const wrapper = `
 import sys, io, traceback
 class MockStdin:
@@ -284,6 +353,9 @@ class MockStdin:
         if self.idx < len(self.lines):
             res = self.lines[self.idx]; self.idx += 1; return res
         return ""
+    def read(self):
+        res = "".join(self.lines[self.idx:]); self.idx = len(self.lines); return res
+
 sys.stdin = MockStdin(input_data)
 sys.stdout = io.StringIO()
 sys.stderr = io.StringIO()
@@ -292,6 +364,7 @@ try:
 except Exception:
     traceback.print_exc(file=sys.stderr)
 [sys.stdout.getvalue(), sys.stderr.getvalue()]`;
+                
                 const resultList = await pyodide.runPythonAsync(wrapper);
                 const actualOut = resultList.toJs()[0].trim();
                 const actualErr = resultList.toJs()[1].trim();
@@ -300,7 +373,7 @@ except Exception:
                     resBox.innerText = "런타임 에러";
                     resBox.className = "result-display res-fail";
                     errLog.style.display = 'block';
-                    errLog.innerText = actualErr;
+                    errLog.innerText = `[테스트 케이스 ${i+1}번에서 에러 발생]\n${actualErr}`;
                     btn.disabled = false; return;
                 }
                 if (actualOut !== c.out) {
@@ -310,6 +383,9 @@ except Exception:
                 }
             } catch(e) {
                 resBox.innerText = "에러 발생";
+                resBox.className = "result-display res-fail";
+                errLog.style.display = 'block';
+                errLog.innerText = e.message;
                 btn.disabled = false; return;
             }
         }
