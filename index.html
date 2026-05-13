@@ -2,9 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Pro | Debug Mode</title>
+    <title>DevJudge Pro | Free API Edition</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
     <style>
         :root { --bg: #0d1117; --sidebar: #161b22; --border: #30363d; --accent: #58a6ff; }
@@ -14,29 +13,22 @@
         .main { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
         .prob-item { cursor: pointer; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid transparent; background: #21262d; }
         .prob-item.active { background: #1f6feb33; border-color: #1f6feb; color: var(--accent); }
-        #editor { height: 450px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
+        #editor { height: 400px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
         .verdict { font-size: 2rem; font-weight: 900; text-align: center; margin-top: 15px; }
-        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; overflow-x: auto; white-space: pre-wrap;}
+        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; }
         .progress { height: 12px; background: #30363d; margin: 20px 0; display: none; border-radius: 10px; }
-        .limit-tag { font-size: 0.85rem; color: #ff7b72; border: 1px solid rgba(255,123,114,0.3); padding: 4px 10px; border-radius: 20px; background: rgba(255,123,114,0.1); }
-        
-        /* 오답 리포트 디자인 */
-        .report-card { border: 1px solid #f85149; border-radius: 8px; background: #161b22; margin-top: 20px; display: none; }
-        .report-header { background: rgba(248, 81, 73, 0.1); color: #ff7b72; padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #f85149; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-        .report-body { padding: 15px; }
-        .report-pre { max-height: 150px; overflow-y: auto; background: #010409; color: #c9d1d9; border: 1px solid #30363d; font-size: 0.9rem; }
+        .limit-tag { font-size: 0.85rem; color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); padding: 4px 10px; border-radius: 20px; background: rgba(88,166,255,0.1); }
     </style>
 </head>
 <body>
 
 <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
-    <h4 class="m-0 fw-bold text-primary">DevJudge <span class="text-white">PRO</span></h4>
-    <div id="status" class="text-warning fw-bold">Python 엔진 부팅 중...</div>
+    <h4 class="m-0 fw-bold text-primary">DevJudge <span class="text-white">Piston API</span></h4>
+    <div id="status" class="text-success fw-bold">무료 퍼블릭 서버 연결됨</div>
 </div>
 
 <div class="layout">
     <div class="sidebar">
-        <button class="btn btn-sm btn-outline-danger w-100 mb-4 fw-bold" onclick="localStorage.clear(); location.reload();">시스템 초기화</button>
         <div id="probList"></div>
     </div>
     <div class="main">
@@ -44,7 +36,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 id="vTitle" class="fw-bold text-white m-0"></h2>
                 <div>
-                    <span class="limit-tag">Time: 2.0s</span>
+                    <span class="limit-tag">Time: 3.0s</span>
                     <span class="limit-tag">Memory: 256MB</span>
                 </div>
             </div>
@@ -52,167 +44,46 @@
             <p id="vDesc" style="white-space: pre-wrap; line-height: 1.6;"></p>
 
             <div id="editor"></div>
-            <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"></div></div>
+            <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"></div></div>
             <div id="vResult" class="verdict"></div>
             
-            <div id="errorReport" class="report-card">
-                <div id="reportHeader" class="report-header">오답 상세 리포트</div>
-                <div class="report-body">
-                    <h6 class="text-info fw-bold">입력 데이터 (Input)</h6>
-                    <pre id="reportIn" class="report-pre"></pre>
-                    <div class="row mt-3">
-                        <div class="col-6">
-                            <h6 class="text-success fw-bold">기대한 정답 (Expected)</h6>
-                            <pre id="reportExp" class="report-pre text-success"></pre>
-                        </div>
-                        <div class="col-6">
-                            <h6 class="text-danger fw-bold">내 출력 (Actual)</h6>
-                            <pre id="reportAct" class="report-pre text-danger"></pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <button id="sBtn" class="btn btn-danger btn-lg w-100 py-3 mt-4 fw-bold" disabled onclick="runFullJudge()">엄격한 채점 시작</button>
+            <button id="sBtn" class="btn btn-primary btn-lg w-100 py-3 mt-4 fw-bold" onclick="runPistonAPI()">퍼블릭 클라우드 채점 시작</button>
         </div>
     </div>
 </div>
 
 <script>
-    let pyodide, editor, activeIdx = -1;
+    let editor, activeIdx = -1;
     
-function generateExtremeCases() {
-        let cases = [];
-
-        // 🏆 1. 완벽하게 검증된 정답 생성기 (Reference Solver)
-        function solve(M, N, boardStr) {
-            let board = boardStr.split('\n').map(r => r.split(' ').map(Number));
-            let q = [];
-            let unripe = 0;
-            for(let i=0; i<N; i++) {
-                for(let j=0; j<M; j++) {
-                    if(board[i][j] === 1) q.push([j, i, 0]);
-                    else if(board[i][j] === 0) unripe++;
-                }
-            }
-            if(unripe === 0) return 0; // 이미 다 익음
-
-            let head = 0, days = 0; // shift() 대신 head 인덱스를 써서 O(1) 성능 유지
-            let dx = [1, -1, 0, 0], dy = [0, 0, 1, -1];
-
-            while(head < q.length) {
-                let curr = q[head++];
-                let x = curr[0], y = curr[1], d = curr[2];
-                days = d;
-                for(let k=0; k<4; k++) {
-                    let nx = x + dx[k], ny = y + dy[k];
-                    if(nx >= 0 && nx < M && ny >= 0 && ny < N && board[ny][nx] === 0) {
-                        board[ny][nx] = 1;
-                        unripe--;
-                        q.push([nx, ny, d + 1]);
-                    }
-                }
-            }
-            return unripe === 0 ? days : -1;
-        }
-
-        function addCase(M, N, boardStr) {
-            let ans = solve(M, N, boardStr);
-            cases.push({ in: `${M} ${N}\n${boardStr}`, out: `${ans}` });
-        }
-
-        // 🎯 2. 크기가 작은 엣지 케이스 (경계값)
-        addCase(2, 2, "1 1\n1 1");   // 이미 다 익은 최소 크기
-        addCase(2, 2, "0 0\n0 0");   // 토마토가 없어서 불가능한 경우 (-1)
-        addCase(2, 2, "1 -1\n-1 0"); // 벽에 막혀서 영원히 안 익는 경우 (-1)
-
-        // 🎲 3. 크기가 점점 커지는 무작위 하드코어 맵 (10x10 ~ 100x100)
-        for(let size = 10; size <= 100; size += 15) {
-            let M = size, N = size;
-            let board = [];
-            let hasRipe = false;
-            
-            for(let i=0; i<N; i++) {
-                let row = [];
-                for(let j=0; j<M; j++) {
-                    let r = Math.random();
-                    if(r < 0.05) { row.push(1); hasRipe = true; } // 5% 확률로 익은 토마토
-                    else if(r < 0.25) row.push(-1);               // 20% 확률로 벽
-                    else row.push(0);                             // 75% 안 익은 토마토
-                }
-                board.push(row.join(' '));
-            }
-            // 익은 토마토가 하나도 없으면 강제로 하나 추가
-            if(!hasRipe) {
-                let rArr = board[0].split(' ');
-                rArr[0] = "1";
-                board[0] = rArr.join(' ');
-            }
-            addCase(M, N, board.join('\n'));
-        }
-
-        // 🔥 4. 극한의 1000 x 1000 케이스 (시간 및 메모리 제한 테스트)
-        const MAX = 1000;
-        
-        // 극한 1: 왼쪽 위부터 오른쪽 아래까지 뻥 뚫린 최장 거리
-        let ext1 = [];
-        for(let i=0; i<MAX; i++) {
-            if(i === 0) ext1.push("1 " + "0 ".repeat(MAX-1).trim());
-            else ext1.push("0 ".repeat(MAX).trim());
-        }
-        cases.push({ in: `${MAX} ${MAX}\n${ext1.join('\n')}`, out: `${MAX + MAX - 2}` });
-
-        // 극한 2: 100만 칸 중 딱 한 칸이 벽에 갇힌 경우 (불가능 체크)
-        let ext2 = [];
-        for(let i=0; i<MAX; i++) {
-            let row = Array(MAX).fill(0);
-            if(i === 0) row[0] = 1;
-            // 맨 오른쪽 아래 구석을 벽(-1)으로 완벽히 가둬버림
-            if(i === MAX-2) row[MAX-1] = -1;
-            if(i === MAX-1) row[MAX-2] = -1;
-            ext2.push(row.join(' '));
-        }
-        cases.push({ in: `${MAX} ${MAX}\n${ext2.join('\n')}`, out: "-1" });
-
-        // 극한 3: 이미 전부 익어 있는 100만 칸 (탐색 로직 낭비 체크)
-        let ext3 = Array(MAX).fill("1 ".repeat(MAX).trim());
-        cases.push({ in: `${MAX} ${MAX}\n${ext3.join('\n')}`, out: "0" });
-
-        return cases;
-    }
-
+    // API 통신 테스트용 A+B 문제
     const probs = [
         { 
-            title: "토마토 (Gold V - Extreme)", 
-            desc: "철수의 창고는 이제 최대 1,000 x 1,000 크기를 가질 수 있습니다. 당신의 코드가 2초 안에 100만 개의 칸을 탐색할 수 있는지 증명하세요.", 
-            cases: generateExtremeCases()
+            title: "A + B (Public API Test)", 
+            desc: "두 숫자의 합을 출력하세요. 이 코드는 회원가입 없이 Piston 오픈소스 서버로 날아가서 채점됩니다.", 
+            cases: [
+                {in: "1 2", out: "3"},
+                {in: "5 5", out: "10"},
+                {in: "100 200", out: "300"}
+            ]
         }
     ];
 
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
     require(['vs/editor/editor.main'], function() {
         editor = monaco.editor.create(document.getElementById('editor'), {
-            value: "# 오답을 유도해 리포트를 확인해보세요.\n", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 15,
-            autoClosingBrackets: 'always', minimap: { enabled: false }
+            value: "a, b = map(int, input().split())\nprint(a + b)", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 15
         });
-    });
-
-    async function init() {
-        pyodide = await loadPyodide();
-        document.getElementById('status').innerText = "✅ 검증 시스템 활성화";
-        document.getElementById('status').className = "text-success fw-bold";
-        document.getElementById('sBtn').disabled = false;
         renderList();
-    }
-    init();
+    });
 
     function renderList() {
         document.getElementById('probList').innerHTML = probs.map((p, i) => 
             `<div class="prob-item ${activeIdx===i?'active':''}" onclick="loadProb(${i})">
                 <div class="fw-bold">${p.title}</div>
-                <small class="text-danger fw-bold">EXTREME CASES LOADED</small>
+                <small class="text-info">${p.cases.length} Cases</small>
             </div>`
         ).join('');
+        loadProb(0);
     }
 
     function loadProb(i) {
@@ -222,93 +93,75 @@ function generateExtremeCases() {
         document.getElementById('vTitle').innerText = p.title;
         document.getElementById('vDesc').innerText = p.desc;
         document.getElementById('vResult').innerText = "";
-        document.getElementById('errorReport').style.display = 'none'; // 문제 변경시 리포트 숨김
-        renderList();
     }
 
-    // 브라우저 폭발 방지를 위한 문자열 자르기 함수
-    function truncateText(text, maxLength = 500) {
-        if (!text) return "출력 없음";
-        if (text.length > maxLength) {
-            return text.substring(0, maxLength) + "\n\n... (데이터가 너무 길어 생략되었습니다)";
-        }
-        return text;
-    }
-
-    async function runFullJudge() {
+    async function runPistonAPI() {
         const userCode = editor.getValue();
         const p = probs[activeIdx];
         const bar = document.getElementById('pBar');
         const res = document.getElementById('vResult');
-        const report = document.getElementById('errorReport');
+        const btn = document.getElementById('sBtn');
         
         document.querySelector('.progress').style.display = 'block';
-        report.style.display = 'none'; // 채점 시작시 리포트 숨김
         bar.style.width = '0%';
-        res.innerText = "채점 중...";
+        res.innerText = "퍼블릭 서버로 코드 전송 중...";
         res.className = "verdict text-warning";
+        btn.disabled = true;
 
         for (let i = 0; i < p.cases.length; i++) {
             const c = p.cases[i];
             
             try {
-                let pyRunner = `
-import sys, io
-sys.stdin = io.StringIO("""${c.in}""")
-sys.stdout = io.StringIO()
-
-def __user_program__():
-${userCode.split('\n').map(line => '    ' + line).join('\n')}
-
-try:
-    __user_program__()
-except EOFError:
-    pass
-sys.stdout.getvalue().strip()
-                `;
+                res.innerText = `케이스 #${i+1} : 원격 채점 중...`;
                 
-                const runCode = pyodide.runPythonAsync(pyRunner);
-                const timeout = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("Time Limit Exceeded")), 2000)
-                );
+                // 🔥 Piston API 호출 (인증, 키, 카드 전혀 필요 없음)
+                const submitRes = await fetch("https://emkc.org/api/v2/piston/execute", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        language: "python",
+                        version: "3.10.0", // 파이썬 버전 지정
+                        files: [{ content: userCode }],
+                        stdin: c.in // 입력 데이터
+                    })
+                });
+                
+                if (!submitRes.ok) throw new Error("API 서버가 응답하지 않습니다.");
+                const data = await submitRes.json();
 
-                const output = await Promise.race([runCode, timeout]);
+                // Piston API는 에러가 났을 때 stderr에, 정상이면 stdout에 값을 줍니다.
+                const actualOut = data.run.stdout ? data.run.stdout.trim() : "";
+                const actualErr = data.run.stderr ? data.run.stderr.trim() : "";
 
-                if (output === c.out.trim()) {
+                if (actualErr) {
+                    res.innerText = `런타임 에러 - 케이스 #${i+1}`;
+                    res.className = "verdict text-danger";
+                    console.error(actualErr);
+                    btn.disabled = false; return;
+                }
+
+                if (actualOut === c.out.trim()) {
                     let pct = Math.floor(((i + 1) / p.cases.length) * 100);
                     bar.style.width = pct + '%';
-                    res.innerText = `채점 중 (${i+1}/${p.cases.length})`;
                 } else {
-                    res.innerText = `틀렸습니다 (케이스 #${i+1})`;
+                    res.innerText = `틀렸습니다 - 케이스 #${i+1}`;
                     res.className = "verdict text-danger";
-                    
-                    // 🔥 틀렸을 때 오답 리포트 표시
-                    report.style.display = 'block';
-                    document.getElementById('reportHeader').innerText = `오답 상세 리포트 (케이스 #${i+1})`;
-                    document.getElementById('reportIn').innerText = truncateText(c.in, 1000);
-                    document.getElementById('reportExp').innerText = truncateText(c.out, 500);
-                    document.getElementById('reportAct').innerText = truncateText(output, 500);
-                    return;
+                    console.log(`기대값: ${c.out}, 실제출력: ${actualOut}`);
+                    btn.disabled = false; return;
                 }
+
+                // 퍼블릭 서버에 과부하를 주지 않기 위해 0.5초 대기
+                await new Promise(r => setTimeout(r, 500));
+
             } catch (e) {
-                if(e.message === "Time Limit Exceeded") {
-                    res.innerText = `시간 초과 (TLE) - 케이스 #${i+1}`;
-                } else {
-                    res.innerText = `런타임 에러 (MLE/RE) - 케이스 #${i+1}`;
-                    
-                    // 에러가 났을 때도 리포트 표시
-                    report.style.display = 'block';
-                    document.getElementById('reportHeader').innerText = `에러 상세 리포트 (케이스 #${i+1})`;
-                    document.getElementById('reportIn').innerText = truncateText(c.in, 1000);
-                    document.getElementById('reportExp').innerText = "에러 없이 " + truncateText(c.out, 50) + " 출력 필요";
-                    document.getElementById('reportAct').innerText = truncateText(e.message || e.toString(), 500);
-                }
+                res.innerText = "통신 에러 발생: " + e.message;
                 res.className = "verdict text-danger";
-                return;
+                btn.disabled = false; return;
             }
         }
-        res.innerText = "맞았습니다!! 🎉 (EXTREME CLEAR)";
+        res.innerText = "맞았습니다!! 🎉 (API Validated)";
         res.className = "verdict text-success";
+        btn.disabled = false;
     }
 </script>
 </body>
