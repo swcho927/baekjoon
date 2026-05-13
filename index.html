@@ -114,22 +114,26 @@
             try {
                 res.innerText = `케이스 #${i+1} : 원격 채점 중...`;
                 
-                // 🔥 Piston API 호출 (인증, 키, 카드 전혀 필요 없음)
+                // 🔥 수정된 Piston API 호출 (버전 자동 매칭, 상세 에러 핸들링)
                 const submitRes = await fetch("https://emkc.org/api/v2/piston/execute", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         language: "python",
-                        version: "3.10.0", // 파이썬 버전 지정
+                        version: "*", // 👈 최신 버전 자동 할당으로 에러 방지
                         files: [{ content: userCode }],
-                        stdin: c.in // 입력 데이터
+                        stdin: c.in
                     })
                 });
                 
-                if (!submitRes.ok) throw new Error("API 서버가 응답하지 않습니다.");
+                if (!submitRes.ok) {
+                    const errorData = await submitRes.text();
+                    console.error("서버 에러 상세 내용:", errorData);
+                    throw new Error(`서버 거부 (상태 코드: ${submitRes.status})`);
+                }
+
                 const data = await submitRes.json();
 
-                // Piston API는 에러가 났을 때 stderr에, 정상이면 stdout에 값을 줍니다.
                 const actualOut = data.run.stdout ? data.run.stdout.trim() : "";
                 const actualErr = data.run.stderr ? data.run.stderr.trim() : "";
 
@@ -150,7 +154,6 @@
                     btn.disabled = false; return;
                 }
 
-                // 퍼블릭 서버에 과부하를 주지 않기 위해 0.5초 대기
                 await new Promise(r => setTimeout(r, 500));
 
             } catch (e) {
