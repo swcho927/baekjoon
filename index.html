@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Ultra v5 | Standard Edition</title>
+    <title>DevJudge Pro | Standard Compliance</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
@@ -11,39 +11,42 @@
         body { background: var(--bg); color: #c9d1d9; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .layout { display: flex; flex: 1; overflow: hidden; }
         .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; }
-        .main { flex: 1; padding: 40px; overflow-y: auto; }
-        .prob-item { cursor: pointer; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid transparent; }
+        .main { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
+        .prob-item { cursor: pointer; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid transparent; background: #21262d; }
         .prob-item.active { background: #1f6feb33; border-color: #1f6feb; color: var(--accent); }
-        #editor { height: 400px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
-        .verdict { font-size: 2rem; font-weight: 800; text-align: center; margin-top: 20px; }
-        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
-        .progress { height: 10px; background: #30363d; margin: 20px 0; display: none; }
+        #editor { height: 450px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
+        .verdict { font-size: 2.2rem; font-weight: 900; text-align: center; margin-top: 20px; }
+        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; }
+        .progress { height: 12px; background: #30363d; margin: 20px 0; display: none; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center">
-    <h4 class="m-0 fw-bold text-primary">DevJudge <span class="text-white opacity-50">PRO</span></h4>
-    <div id="status" class="text-warning small">엔진 준비 중...</div>
+<div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
+    <h4 class="m-0 fw-bold text-primary"><i class="bi bi-code-square me-2"></i>DevJudge Ultra</h4>
+    <div id="status" class="text-warning fw-bold">Python 로딩 중...</div>
 </div>
 
 <div class="layout">
     <div class="sidebar">
-        <button class="btn btn-sm btn-outline-danger w-100 mb-3" onclick="localStorage.clear(); location.reload();">데이터 초기화</button>
+        <button class="btn btn-sm btn-danger w-100 mb-4 fw-bold" onclick="localStorage.clear(); location.reload();">시스템 초기화</button>
         <div id="probList"></div>
     </div>
     <div class="main">
         <div id="probContent" style="display:none;">
-            <h2 id="vTitle" class="fw-bold text-white"></h2>
-            <p id="vDesc" class="mt-3" style="white-space: pre-wrap;"></p>
+            <div class="d-flex justify-content-between">
+                <h2 id="vTitle" class="fw-bold text-white"></h2>
+                <div class="text-info fw-bold">Time Limit: 2.0s</div>
+            </div>
+            <p id="vDesc" class="mt-3 fs-5" style="white-space: pre-wrap;"></p>
             <div class="row mt-4">
-                <div class="col-6"><h6>입력 예시</h6><pre id="vIn"></pre></div>
-                <div class="col-6"><h6>출력 예시</h6><pre id="vOut"></pre></div>
+                <div class="col-6"><h6>Sample Input</h6><pre id="vIn"></pre></div>
+                <div class="col-6"><h6>Sample Output</h6><pre id="vOut"></pre></div>
             </div>
             <div id="editor"></div>
-            <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated"></div></div>
+            <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"></div></div>
             <div id="vResult" class="verdict"></div>
-            <button id="sBtn" class="btn btn-primary btn-lg w-100 py-3 mt-3 fw-bold" disabled onclick="runFullJudge()">제출 및 채점</button>
+            <button id="sBtn" class="btn btn-primary btn-lg w-100 py-3 mt-2 fw-bold" disabled onclick="runFullJudge()">코드 제출 및 채점</button>
         </div>
     </div>
 </div>
@@ -51,32 +54,37 @@
 <script>
     let pyodide, editor, activeIdx = -1;
     
-    // 50개 이상의 테스트케이스 자동 생성
+    // 50개 테스트케이스 자동 생성
     function getTomatoData() {
-        let c = [
+        let cases = [
             {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"},
             {in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1"},
             {in: "2 2\n1 -1\n-1 1", out: "0"}
         ];
-        for(let i=1; i<=50; i++) c.push({in: `${i+2} 2\n${"0 ".repeat(i+1)}1\n${"0 ".repeat(i+2)}`.trim(), out: `${i+1}`});
-        return c;
+        // 추가 케이스들
+        for(let i=1; i<=50; i++) {
+            cases.push({in: `${i+2} 2\n${"0 ".repeat(i+1)}1\n${"0 ".repeat(i+2)}`.trim(), out: `${i+1}`});
+        }
+        return cases;
     }
 
     const probs = [
-        { title: "토마토 (Gold V)", desc: "익은 토마토(1) 주변의 안 익은 토마토(0)들이 익어가는 최소 일수를 구하세요.", in: "6 4\n...", out: "8", cases: getTomatoData() },
-        { title: "A + B", desc: "A와 B의 합을 구하세요.", in: "1 2", out: "3", cases: [{in:"1 2", out:"3"}, {in:"10 20", out:"30"}] }
+        { title: "토마토 (Gold V)", desc: "토마토가 모두 익을 때까지 걸리는 최소 일수를 구하세요. (정올 Intermediate)", cases: getTomatoData() },
+        { title: "A + B", desc: "두 숫자의 합을 출력하세요.", cases: [{in:"1 2", out:"3"}] }
     ];
 
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
     require(['vs/editor/editor.main'], function() {
         editor = monaco.editor.create(document.getElementById('editor'), {
-            value: "", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 14
+            value: "", language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 15,
+            autoClosingBrackets: 'always', minimap: { enabled: false }
         });
     });
 
     async function init() {
         pyodide = await loadPyodide();
-        document.getElementById('status').innerText = "✅ 시스템 준비 완료";
+        document.getElementById('status').innerText = "✅ READY";
+        document.getElementById('status').className = "text-success fw-bold";
         document.getElementById('sBtn').disabled = false;
         renderList();
     }
@@ -84,7 +92,10 @@
 
     function renderList() {
         document.getElementById('probList').innerHTML = probs.map((p, i) => 
-            `<div class="prob-item ${activeIdx===i?'active':''}" onclick="loadProb(${i})">${p.title}<br><small class="opacity-50">${p.cases.length} Cases</small></div>`
+            `<div class="prob-item ${activeIdx===i?'active':''}" onclick="loadProb(${i})">
+                <div class="fw-bold">${p.title}</div>
+                <small class="opacity-50">${p.cases.length} Testcases</small>
+            </div>`
         ).join('');
     }
 
@@ -101,7 +112,7 @@
     }
 
     async function runFullJudge() {
-        const code = editor.getValue();
+        const userCode = editor.getValue();
         const p = probs[activeIdx];
         const bar = document.getElementById('pBar');
         const res = document.getElementById('vResult');
@@ -114,17 +125,21 @@
         for (let i = 0; i < p.cases.length; i++) {
             const c = p.cases[i];
             try {
-                // 핵심: 매 케이스마다 전역 변수(Globals)를 완전히 비워버림
-                await pyodide.runPythonAsync(`
-                    import sys, io
-                    for name in list(globals().keys()):
-                        if not name.startswith("__"): del globals()[name]
-                    sys.stdin = io.StringIO("${c.in.replace(/\n/g, '\\n')}")
-                    sys.stdout = io.StringIO()
-                `);
+                // 핵심 수정: 매번 독립적인 전역 네임스페이스를 생성하여 'global' 변수 오염 원천 차단
+                let pyCode = `
+import sys, io
+from collections import deque
+sys.stdin = io.StringIO("""${c.in}""")
+sys.stdout = io.StringIO()
+
+def __run_user_code__():
+${userCode.split('\n').map(line => '    ' + line).join('\n')}
+
+__run_user_code__()
+sys.stdout.getvalue().strip()
+                `;
                 
-                await pyodide.runPythonAsync(code);
-                const userOut = pyodide.runPython("sys.stdout.getvalue()").trim();
+                const userOut = await pyodide.runPythonAsync(pyCode);
 
                 if (userOut === c.out.trim()) {
                     let pct = Math.floor(((i + 1) / p.cases.length) * 100);
@@ -132,11 +147,14 @@
                     res.innerText = `채점 중... (${i+1}/${p.cases.length})`;
                 } else {
                     res.innerText = `틀렸습니다 (Case #${i+1})`;
-                    res.className = "verdict text-danger"; return;
+                    res.className = "verdict text-danger";
+                    return;
                 }
             } catch (e) {
-                res.innerText = "에러 발생";
-                res.className = "verdict text-danger"; return;
+                res.innerText = "런타임 에러";
+                res.className = "verdict text-danger";
+                console.error(e);
+                return;
             }
         }
         res.innerText = "맞았습니다!! 🎉";
