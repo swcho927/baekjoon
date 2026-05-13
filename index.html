@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Pro | Standard Compliance</title>
+    <title>DevJudge Pro | 정올 Intermediate 토마토</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
     <style>
         :root { --bg: #0d1117; --sidebar: #161b22; --border: #30363d; --accent: #58a6ff; }
-        body { background: var(--bg); color: #c9d1d9; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { background-color: var(--bg); color: #c9d1d9; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .layout { display: flex; flex: 1; overflow: hidden; }
         .sidebar { width: 300px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; }
         .main { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
@@ -16,33 +16,43 @@
         .prob-item.active { background: #1f6feb33; border-color: #1f6feb; color: var(--accent); }
         #editor { height: 450px; border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; }
         .verdict { font-size: 2.2rem; font-weight: 900; text-align: center; margin-top: 20px; }
-        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; }
+        pre { background: #010409; color: #7ee787; padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; }
         .progress { height: 12px; background: #30363d; margin: 20px 0; display: none; border-radius: 10px; }
+        .spec-box { background: rgba(88, 166, 255, 0.05); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
-    <h4 class="m-0 fw-bold text-primary"><i class="bi bi-code-square me-2"></i>DevJudge Ultra</h4>
+    <h4 class="m-0 fw-bold text-primary"><i class="bi bi-journal-code me-2"></i>DevJudge Ultra <span class="text-white opacity-50">Standard</span></h4>
     <div id="status" class="text-warning fw-bold">Python 로딩 중...</div>
 </div>
 
 <div class="layout">
     <div class="sidebar">
-        <button class="btn btn-sm btn-danger w-100 mb-4 fw-bold" onclick="localStorage.clear(); location.reload();">시스템 초기화</button>
+        <button class="btn btn-sm btn-danger w-100 mb-4 fw-bold" onclick="localStorage.clear(); location.reload();">시스템 초기화 (필수)</button>
         <div id="probList"></div>
     </div>
     <div class="main">
         <div id="probContent" style="display:none;">
-            <div class="d-flex justify-content-between">
-                <h2 id="vTitle" class="fw-bold text-white"></h2>
-                <div class="text-info fw-bold">Time Limit: 2.0s</div>
+            <h2 id="vTitle" class="fw-bold text-white mb-4"></h2>
+            
+            <div class="spec-box">
+                <h6 class="text-info fw-bold mb-2">[문제 설명]</h6>
+                <p id="vDesc" style="white-space: pre-wrap; line-height: 1.6;"></p>
             </div>
-            <p id="vDesc" class="mt-3 fs-5" style="white-space: pre-wrap;"></p>
-            <div class="row mt-4">
-                <div class="col-6"><h6>Sample Input</h6><pre id="vIn"></pre></div>
-                <div class="col-6"><h6>Sample Output</h6><pre id="vOut"></pre></div>
+
+            <div class="row">
+                <div class="col-6">
+                    <h6 class="text-muted fw-bold">Sample Input</h6>
+                    <pre id="vIn"></pre>
+                </div>
+                <div class="col-6">
+                    <h6 class="text-muted fw-bold">Sample Output</h6>
+                    <pre id="vOut"></pre>
+                </div>
             </div>
+
             <div id="editor"></div>
             <div class="progress"><div id="pBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"></div></div>
             <div id="vResult" class="verdict"></div>
@@ -54,14 +64,14 @@
 <script>
     let pyodide, editor, activeIdx = -1;
     
-    // 50개 테스트케이스 자동 생성
+    // 50개 테스트케이스 자동 생성 (토마토 전용)
     function getTomatoData() {
         let cases = [
             {in: "6 4\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "8"},
             {in: "6 4\n0 -1 0 0 0 0\n-1 0 0 0 0 0\n0 0 0 0 0 0\n0 0 0 0 0 1", out: "-1"},
             {in: "2 2\n1 -1\n-1 1", out: "0"}
         ];
-        // 추가 케이스들
+        // 대규모 테스트케이스 50개 생성
         for(let i=1; i<=50; i++) {
             cases.push({in: `${i+2} 2\n${"0 ".repeat(i+1)}1\n${"0 ".repeat(i+2)}`.trim(), out: `${i+1}`});
         }
@@ -69,8 +79,11 @@
     }
 
     const probs = [
-        { title: "토마토 (Gold V)", desc: "토마토가 모두 익을 때까지 걸리는 최소 일수를 구하세요. (정올 Intermediate)", cases: getTomatoData() },
-        { title: "A + B", desc: "두 숫자의 합을 출력하세요.", cases: [{in:"1 2", out:"3"}] }
+        { 
+            title: "토마토 (Intermediate)", 
+            desc: `창고에 보관되는 토마토들 중에는 잘 익은 것도 있지만, 아직 익지 않은 토마토들도 있을 수 있다. 보관 후 하루가 지나면, 익은 토마토들의 인접한 곳에 있는 익지 않은 토마토들은 익은 토마토의 영향을 받아 익게 된다. \n\n하나의 토마토의 인접한 곳은 왼쪽, 오른쪽, 앞, 뒤 네 방향에 있는 토마토를 의미한다. 대각선 방향에 있는 토마토들에게는 영향을 주지 못하며, 토마토가 혼자 저절로 익는 경우는 없다고 가정한다. \n\n철수는 창고에 보관된 토마토들이 며칠이 지나면 다 익게 되는지, 그 최소 일수를 알고 싶어 한다. 토마토를 창고에 보관하는 격자모양의 상자들의 크기와 익은 토마토들과 익지 않은 토마토들의 정보가 주어졌을 때, 며칠이 지나면 토마토들이 모두 익는지, 그 최소 일수를 구하는 프로그램을 작성하라. 단, 상자의 일부 칸에는 토마토가 들어있지 않을 수도 있다.`, 
+            cases: getTomatoData() 
+        }
     ];
 
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
@@ -83,7 +96,7 @@
 
     async function init() {
         pyodide = await loadPyodide();
-        document.getElementById('status').innerText = "✅ READY";
+        document.getElementById('status').innerText = "✅ 엔진 준비 완료";
         document.getElementById('status').className = "text-success fw-bold";
         document.getElementById('sBtn').disabled = false;
         renderList();
@@ -94,7 +107,7 @@
         document.getElementById('probList').innerHTML = probs.map((p, i) => 
             `<div class="prob-item ${activeIdx===i?'active':''}" onclick="loadProb(${i})">
                 <div class="fw-bold">${p.title}</div>
-                <small class="opacity-50">${p.cases.length} Testcases</small>
+                <small class="opacity-50">${p.cases.length} 테스트케이스 로드됨</small>
             </div>`
         ).join('');
     }
@@ -125,28 +138,31 @@
         for (let i = 0; i < p.cases.length; i++) {
             const c = p.cases[i];
             try {
-                // 핵심 수정: 매번 독립적인 전역 네임스페이스를 생성하여 'global' 변수 오염 원천 차단
-                let pyCode = `
+                // 매 케이스마다 파이썬 전역 환경을 완전히 격리 (사용자 코드 실행 방식)
+                let pyRunner = `
 import sys, io
 from collections import deque
 sys.stdin = io.StringIO("""${c.in}""")
 sys.stdout = io.StringIO()
 
-def __run_user_code__():
+def __user_program__():
 ${userCode.split('\n').map(line => '    ' + line).join('\n')}
 
-__run_user_code__()
+try:
+    __user_program__()
+except EOFError:
+    pass
 sys.stdout.getvalue().strip()
                 `;
                 
-                const userOut = await pyodide.runPythonAsync(pyCode);
+                const output = await pyodide.runPythonAsync(pyRunner);
 
-                if (userOut === c.out.trim()) {
+                if (output === c.out.trim()) {
                     let pct = Math.floor(((i + 1) / p.cases.length) * 100);
                     bar.style.width = pct + '%';
-                    res.innerText = `채점 중... (${i+1}/${p.cases.length})`;
+                    res.innerText = `채점 중 (${i+1}/${p.cases.length})`;
                 } else {
-                    res.innerText = `틀렸습니다 (Case #${i+1})`;
+                    res.innerText = `틀렸습니다 (케이스 #${i+1})`;
                     res.className = "verdict text-danger";
                     return;
                 }
