@@ -1,7 +1,6 @@
 let pyodideWorker;
 let isReady = false;
 
-// 1. A+B 테스트 케이스
 const testCases = [
     { in: "1 2", out: "3" },
     { in: "10 20", out: "30" },
@@ -10,14 +9,17 @@ const testCases = [
     { in: "-5 5", out: "0" }
 ];
 
-// 2. 파이썬 엔진 초기화
 function initPythonEngine() {
     const workerCode = `
         importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
         let pyodide;
         async function load() {
-            pyodide = await loadPyodide();
-            postMessage({ type: 'ready' });
+            try {
+                pyodide = await loadPyodide();
+                postMessage({ type: 'ready' });
+            } catch (e) {
+                postMessage({ type: 'error', error: e.message });
+            }
         }
         self.onmessage = async (e) => {
             const { id, code, input } = e.data;
@@ -55,13 +57,16 @@ except Exception as e:
         if (e.data.type === 'ready') {
             isReady = true;
             const btn = document.getElementById('sBtn');
-            btn.disabled = false;
-            btn.innerText = "제출 및 채점 시작";
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "제출 및 채점 시작";
+            }
+        } else if (e.data.type === 'error') {
+            console.error("Pyodide 로드 실패:", e.data.error);
         }
     };
 }
 
-// 3. 채점 실행
 async function runJudge(userCode) {
     if (!isReady) return;
 
@@ -77,7 +82,6 @@ async function runJudge(userCode) {
 
     for (let i = 0; i < testCases.length; i++) {
         const tc = testCases[i];
-        
         const res = await new Promise(resolve => {
             const id = Math.random().toString(36).substr(2, 9);
             const handler = (e) => {
@@ -111,6 +115,8 @@ async function runJudge(userCode) {
 
 function showResult(text, type) {
     const resBox = document.getElementById('resultBox');
-    resBox.innerText = text;
-    resBox.className = `result-display ${type}`;
+    if (resBox) {
+        resBox.innerText = text;
+        resBox.className = `result-display ${type}`;
+    }
 }
