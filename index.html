@@ -2,51 +2,264 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Pro - A+B Python</title>
+    <title>DevJudge Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- problems/*.js 보다 반드시 먼저 선언돼야 하는 공통 유틸 -->
+    <script>
+        window.PROBLEMS = {};
+        function seededRand(seed) {
+            let s = seed >>> 0;
+            return () => {
+                s = Math.imul(s, 1664525) + 1013904223 >>> 0;
+                return s / 0x100000000;
+            };
+        }
+    </script>
 </head>
 <body>
 
-<nav class="navbar px-4">
-    <span class="navbar-brand">DEVJUDGE <span style="color:white">PRO</span></span>
-</nav>
-
-<div class="container mt-5">
-    <h2>A+B 문제</h2>
-    <p class="text-muted">두 정수 A와 B를 입력받아 합을 출력하는 프로그램을 작성하세요.</p>
-    
-    <div id="editor-container" style="height: 350px; border: 1px solid #30363d; border-radius: 8px;"></div>
-    
-    <button id="sBtn" class="btn-submit w-100 mt-3" onclick="startJudging()" disabled>엔진 로딩 중...</button>
-    
-    <div id="resultBox" class="result-display"></div>
-    <div id="errorLog" class="error-log" style="display:none;"></div>
+<!-- ── 상단 바 ── -->
+<div class="topbar">
+    <span class="topbar-brand">DEVJUDGE <span>PRO</span></span>
+    <div class="topbar-divider"></div>
+    <div class="topbar-status">
+        <div class="status-dot loading" id="statusDot"></div>
+        <span id="statusLabel">Python 엔진 로딩 중...</span>
+    </div>
 </div>
 
-<script src="./judge.js"></script>
-<script>
-    let editor;
+<div class="layout">
 
-    // 모나코 에디터 로드
-    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
-    require(['vs/editor/editor.main'], function() {
-        editor = monaco.editor.create(document.getElementById('editor-container'), {
-            value: "import sys\n\na, b = map(int, sys.stdin.readline().split())\nprint(a + b)",
-            language: 'python',
-            theme: 'vs-dark',
-            automaticLayout: true,
-            fontSize: 16
-        });
-        // 엔진 초기화 (judge.js 내 함수)
-        initPythonEngine();
-    });
+    <!-- ── 사이드바 ── -->
+    <nav class="sidebar">
+        <div class="sidebar-label">문제 목록</div>
 
-    async function startJudging() {
-        const code = editor.getValue();
-        runJudge(code);
-    }
-</script>
+        <a class="sidebar-item active" id="tab-aplusb" onclick="switchProblem('aplusb')">
+            <span class="sidebar-num">1000</span>
+            <span class="sidebar-title">A+B</span>
+            <span class="sidebar-badge badge-silver">Bronze</span>
+        </a>
+
+        <a class="sidebar-item" id="tab-tomato" onclick="switchProblem('tomato')">
+            <span class="sidebar-num">7576</span>
+            <span class="sidebar-title">토마토</span>
+            <span class="sidebar-badge badge-silver">Silver</span>
+        </a>
+
+        <a class="sidebar-item" id="tab-knapsack" onclick="switchProblem('knapsack')">
+            <span class="sidebar-num">12865</span>
+            <span class="sidebar-title">평범한 배낭</span>
+            <span class="sidebar-badge badge-gold">Gold</span>
+        </a>
+    </nav>
+
+    <!-- ── 메인 콘텐츠 ── -->
+    <div class="main-content">
+
+        <!-- ══ 1000. A+B ══ -->
+        <div class="prob-page active" id="page-aplusb">
+        <div class="container">
+            <div class="problem-header">
+                <div class="problem-number">백준 1000번</div>
+                <h1 class="problem-title">A+B</h1>
+            </div>
+            <table class="info-table">
+                <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
+                <tbody><tr><td>2 초</td><td>256 MB</td><td id="tcCountAplusb">생성 중...</td><td>100 점</td></tr></tbody>
+            </table>
+
+            <div class="section-title">문제</div>
+            <div class="content-box">두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.</div>
+
+            <div class="section-title">입력</div>
+            <div class="content-box">첫째 줄에 A와 B가 주어진다. (0 &lt; A, B &lt; 10)</div>
+
+            <div class="section-title">출력</div>
+            <div class="content-box">첫째 줄에 A+B를 출력한다.</div>
+
+            <div class="section-title">예제</div>
+            <div class="examples-grid">
+                <div class="example-block">
+                    <div class="example-header">입력 1</div>
+                    <div class="example-content">1 2</div>
+                </div>
+                <div class="example-block">
+                    <div class="example-header">출력 1</div>
+                    <div class="example-content">3</div>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <div class="submit-header">
+                    <span class="submit-title">코드 제출</span>
+                    <span class="submit-lang">Python 3 · Pyodide v0.25.0</span>
+                </div>
+                <div class="editor-wrap" id="editor-aplusb"></div>
+                <button id="sBtn-aplusb" class="btn-submit" onclick="submitCode('aplusb')" disabled>Python 엔진 로딩 중...</button>
+                <div class="judge-area">
+                    <div class="progress-wrap" id="progressWrap-aplusb">
+                        <div class="progress-info">
+                            <span>채점 중 <span id="progressNum-aplusb">0 / 0</span></span>
+                            <span id="progressText-aplusb">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill-aplusb"></div></div>
+                    </div>
+                    <div id="resultBox-aplusb" class="result-display"></div>
+                    <div id="errorLog-aplusb"  class="error-log"></div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- ══ 7576. 토마토 ══ -->
+        <div class="prob-page" id="page-tomato">
+        <div class="container">
+            <div class="problem-header">
+                <div class="problem-number">백준 7576번</div>
+                <h1 class="problem-title">토마토</h1>
+            </div>
+            <table class="info-table">
+                <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
+                <tbody><tr><td>2 초</td><td>256 MB</td><td id="tcCountTomato">생성 중...</td><td>100 점</td></tr></tbody>
+            </table>
+
+            <div class="section-title">문제</div>
+            <div class="content-box">
+                철수의 토마토 농장에서는 토마토를 보관하는 큰 창고를 가지고 있다.
+                보관 후 하루가 지나면, 익은 토마토들의 인접한 곳(상하좌우)에 있는 익지 않은 토마토들이 익게 된다.
+                며칠이 지나면 토마토들이 모두 익게 되는지, 그 최소 일수를 구하는 프로그램을 작성하시오.
+            </div>
+
+            <div class="section-title">입력</div>
+            <div class="content-box">
+                첫 줄에는 상자의 크기를 나타내는 두 정수 M, N이 주어진다. (2 ≤ M, N ≤ 1,000)<br>
+                둘째 줄부터는 상자에 담긴 토마토의 정보가 주어진다.
+                1은 익은 토마토, 0은 익지 않은 토마토, -1은 토마토가 들어있지 않은 칸을 나타낸다.
+            </div>
+
+            <div class="section-title">출력</div>
+            <div class="content-box">
+                토마토가 모두 익을 때까지의 최소 날짜를 출력한다.
+                만약 처음부터 다 익어있으면 0, 모두 익지 못하는 상황이면 -1을 출력한다.
+            </div>
+
+            <div class="section-title">예제</div>
+            <div class="examples-grid">
+                <div class="example-block">
+                    <div class="example-header">입력 1</div>
+                    <div class="example-content">6 4
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 1</div>
+                </div>
+                <div class="example-block">
+                    <div class="example-header">출력 1</div>
+                    <div class="example-content">8</div>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <div class="submit-header">
+                    <span class="submit-title">코드 제출</span>
+                    <span class="submit-lang">Python 3 · Pyodide v0.25.0</span>
+                </div>
+                <div class="editor-wrap" id="editor-tomato"></div>
+                <button id="sBtn-tomato" class="btn-submit" onclick="submitCode('tomato')" disabled>Python 엔진 로딩 중...</button>
+                <div class="judge-area">
+                    <div class="progress-wrap" id="progressWrap-tomato">
+                        <div class="progress-info">
+                            <span>채점 중 <span id="progressNum-tomato">0 / 0</span></span>
+                            <span id="progressText-tomato">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill-tomato"></div></div>
+                    </div>
+                    <div id="resultBox-tomato" class="result-display"></div>
+                    <div id="errorLog-tomato"  class="error-log"></div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- ══ 12865. 평범한 배낭 ══ -->
+        <div class="prob-page" id="page-knapsack">
+        <div class="container">
+            <div class="problem-header">
+                <div class="problem-number">백준 12865번</div>
+                <h1 class="problem-title">평범한 배낭</h1>
+            </div>
+            <table class="info-table">
+                <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
+                <tbody><tr><td>2 초</td><td>512 MB</td><td id="tcCountKnapsack">생성 중...</td><td>100 점</td></tr></tbody>
+            </table>
+
+            <div class="section-title">문제</div>
+            <div class="content-box">
+                이 문제는 아주 평범한 배낭에 관한 문제이다.<br><br>
+                준서가 여행에 필요하다고 생각하는 N개의 물건이 있다. 각 물건은 무게 W와 가치 V를 가지는데,
+                해당 물건을 배낭에 넣어서 가면 준서가 V만큼 즐길 수 있다.
+                아직 행군을 해본 적이 없는 준서는 최대 K만큼의 무게만을 넣을 수 있는 배낭만 들고 다닐 수 있다.
+                준서가 최대한 즐거운 여행을 하기 위해 배낭에 넣을 수 있는 물건들의 가치의 최댓값을 알려주자.
+            </div>
+
+            <div class="section-title">입력</div>
+            <div class="content-box">
+                첫 줄에 물품의 수 N(1 ≤ N ≤ 100)과 준서가 버틸 수 있는 무게 K(1 ≤ K ≤ 100,000)가 주어진다.<br>
+                두 번째 줄부터 N개의 줄에 걸쳐 각 물건의 무게 W(1 ≤ W ≤ 100,000)와
+                해당 물건의 가치 V(0 ≤ V ≤ 1,000)가 주어진다.
+            </div>
+
+            <div class="section-title">출력</div>
+            <div class="content-box">한 줄에 배낭에 넣을 수 있는 물건들의 가치합의 최댓값을 출력한다.</div>
+
+            <div class="section-title">예제</div>
+            <div class="examples-grid">
+                <div class="example-block">
+                    <div class="example-header">입력 1</div>
+                    <div class="example-content">4 7
+6 13
+4 8
+3 6
+5 12</div>
+                </div>
+                <div class="example-block">
+                    <div class="example-header">출력 1</div>
+                    <div class="example-content">14</div>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <div class="submit-header">
+                    <span class="submit-title">코드 제출</span>
+                    <span class="submit-lang">Python 3 · Pyodide v0.25.0</span>
+                </div>
+                <div class="editor-wrap" id="editor-knapsack"></div>
+                <button id="sBtn-knapsack" class="btn-submit" onclick="submitCode('knapsack')" disabled>Python 엔진 로딩 중...</button>
+                <div class="judge-area">
+                    <div class="progress-wrap" id="progressWrap-knapsack">
+                        <div class="progress-info">
+                            <span>채점 중 <span id="progressNum-knapsack">0 / 0</span></span>
+                            <span id="progressText-knapsack">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill-knapsack"></div></div>
+                    </div>
+                    <div id="resultBox-knapsack" class="result-display"></div>
+                    <div id="errorLog-knapsack"  class="error-log"></div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+    </div><!-- /main-content -->
+</div><!-- /layout -->
+
+<script src="problems/aplusb.js"></script>
+<script src="problems/tomato.js"></script>
+<script src="problems/knapsack.js"></script>
+<script src="judge.js"></script>
+<script>initJudge();</script>
 </body>
 </html>
