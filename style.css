@@ -1,0 +1,178 @@
+:root {
+    --bg-main: #0d1117;
+    --bg-card: #161b22;
+    --border-color: #30363d;
+    --accent-blue: #58a6ff;
+    --accent-dark-blue: #1f6feb;
+    --text-main: #c9d1d9;
+    --text-muted: #8b949e;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+}
+
+/* ── 네비게이션 ── */
+.navbar {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 2rem;
+}
+.navbar-brand {
+    color: var(--accent-blue) !important;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+}
+.nav-link-prob {
+    color: var(--text-muted) !important;
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: 0.15s;
+    cursor: pointer;
+}
+.nav-link-prob:hover,
+.nav-link-prob.active {
+    background-color: rgba(88, 166, 255, 0.1);
+    color: var(--accent-blue) !important;
+}
+
+/* ── 레이아웃 ── */
+.container { max-width: 1100px; padding: 40px 20px; }
+
+.problem-header {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 30px;
+    padding-bottom: 10px;
+}
+.problem-title { font-size: 2rem; font-weight: 600; color: white; }
+
+/* ── 정보 테이블 ── */
+.info-table {
+    width: 100%;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 40px;
+    overflow: hidden;
+}
+.info-table th {
+    background-color: rgba(48, 54, 61, 0.5);
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+.info-table td {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: bold;
+}
+
+/* ── 섹션 제목 ── */
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: white;
+    margin-top: 50px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+}
+.section-title::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background-color: var(--accent-blue);
+    margin-right: 12px;
+    border-radius: 2px;
+}
+
+/* ── 콘텐츠 박스 ── */
+.content-box {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+    font-size: 1.05rem;
+}
+
+/* ── 예제 ── */
+.example-header { font-weight: 600; margin-bottom: 10px; color: var(--accent-blue); }
+.example-content {
+    background-color: #010409;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #7ee787;
+    white-space: pre-wrap;
+}
+
+/* ── 제출 섹션 ── */
+.submit-section {
+    background-color: #161b22;
+    border: 1px solid var(--accent-dark-blue);
+    border-radius: 12px;
+    padding: 30px;
+    margin-top: 80px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.editor-wrap {
+    height: 450px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin: 20px 0;
+}
+.btn-submit {
+    background-color: var(--accent-dark-blue);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    border-radius: 6px;
+    transition: 0.2s;
+    width: 100%;
+}
+.btn-submit:hover  { background-color: #388bfd; }
+.btn-submit:disabled { background-color: #21262d; color: #8b949e; cursor: not-allowed; }
+
+/* ── 채점 결과 ── */
+.result-display {
+    margin-top: 25px;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    display: none;
+}
+.res-judging { color: #e3b341; background: rgba(227,179,65,0.1);  border: 1px solid rgba(227,179,65,0.3); }
+.res-success { color: #3fb950; background: rgba(63,185,80,0.1);   border: 1px solid rgba(63,185,80,0.3); }
+.res-fail    { color: #f85149; background: rgba(248,81,73,0.1);   border: 1px solid rgba(248,81,73,0.3); }
+
+.error-log {
+    display: none;
+    margin-top: 20px;
+    padding: 15px;
+    background: #21262d;
+    border: 1px solid #f85149;
+    color: #f85149;
+    border-radius: 6px;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+
+/* ── 탭 페이지 ── */
+.prob-page          { display: none; }
+.prob-page.active   { display: block; }
