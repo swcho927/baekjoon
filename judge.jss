@@ -1,200 +1,116 @@
-// ═══════════════════════════════════════════════════════
-//  judge.js  —  Pyodide Worker + 채점 공통 로직
-//
-//  의존: 각 problems/*.js 가 window.PROBLEMS 에 등록한 뒤
-//        initJudge() 를 호출해야 함
-// ═══════════════════════════════════════════════════════
+let pyodideWorker;
+let isReady = false;
 
-// ── 공통 유틸 ────────────────────────────────────────────
-function seededRand(seed) {
-    let s = seed >>> 0;
-    return () => {
-        s = Math.imul(s, 1664525) + 1013904223 >>> 0;
-        return s / 0x100000000;
-    };
-}
+// 1. A+B 테스트 케이스
+const testCases = [
+    { in: "1 2", out: "3" },
+    { in: "10 20", out: "30" },
+    { in: "100 200", out: "300" },
+    { in: "0 0", out: "0" },
+    { in: "-5 5", out: "0" }
+];
 
-// ── Pyodide Worker ────────────────────────────────────────
-const WORKER_SRC = `
-importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
-let pyodide;
-async function load() { pyodide = await loadPyodide(); postMessage({ type: 'ready' }); }
-self.onmessage = async (e) => {
-    const { id, code, input } = e.data;
-    try {
-        pyodide.globals.set("user_code", code);
-        pyodide.globals.set("input_data", input);
-        const w = \`
-import sys, io, traceback
+// 2. 파이썬 엔진 초기화
+function initPythonEngine() {
+    const workerCode = `
+        importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
+        let pyodide;
+        async function load() {
+            pyodide = await loadPyodide();
+            postMessage({ type: 'ready' });
+        }
+        self.onmessage = async (e) => {
+            const { id, code, input } = e.data;
+            try {
+                pyodide.globals.set("user_code", code);
+                pyodide.globals.set("input_data", input);
+                const wrapper = \`
+import sys, io
 class MockStdin:
     def __init__(self, d): self.lines = d.splitlines(True); self.idx = 0
     def readline(self):
         if self.idx < len(self.lines):
-            r = self.lines[self.idx]; self.idx += 1; return r
+            res = self.lines[self.idx]; self.idx += 1; return res
         return ""
-    def read(self):
-        r = "".join(self.lines[self.idx:]); self.idx = len(self.lines); return r
-sys.stdin  = MockStdin(input_data)
+sys.stdin = MockStdin(input_data)
 sys.stdout = io.StringIO()
 sys.stderr = io.StringIO()
 try:
     exec(user_code, {'__name__': '__main__'})
-except Exception:
+except Exception as e:
+    import traceback
     traceback.print_exc(file=sys.stderr)
-[sys.stdout.getvalue(), sys.stderr.getvalue()]
+[sys.stdout.getvalue().strip(), sys.stderr.getvalue().strip()]
 \`;
-        const res = await pyodide.runPythonAsync(w);
-        postMessage({ id, out: res.toJs()[0].trim(), err: res.toJs()[1].trim() });
-    } catch (err) {
-        postMessage({ id, error: err.message });
-    }
-};
-load();
-`;
-
-const pyodideWorker = new Worker(
-    URL.createObjectURL(new Blob([WORKER_SRC], { type: 'application/javascript' }))
-);
-let pyodideReady = false;
-
-pyodideWorker.onmessage = (e) => {
-    if (e.data.type === 'ready') {
-        pyodideReady = true;
-        // 등록된 모든 문제의 버튼 활성화
-        document.querySelectorAll('.btn-submit').forEach(btn => {
-            btn.innerText  = '제출 및 채점 시작';
-            btn.disabled   = false;
-        });
-    }
-};
-
-function runInWorker(code, input) {
-    return new Promise(resolve => {
-        const id = Math.random().toString(36).substr(2, 9);
-        const handler = (e) => {
-            if (e.data.id === id) {
-                pyodideWorker.removeEventListener('message', handler);
-                resolve(e.data);
-            }
+                const resList = await pyodide.runPythonAsync(wrapper);
+                postMessage({ id, out: resList.toJs()[0], err: resList.toJs()[1] });
+            } catch(err) { postMessage({ id, error: err.message }); }
         };
-        pyodideWorker.addEventListener('message', handler);
-        pyodideWorker.postMessage({ id, code, input });
-    });
+        load();
+    `;
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    pyodideWorker = new Worker(URL.createObjectURL(blob));
+    
+    pyodideWorker.onmessage = (e) => {
+        if (e.data.type === 'ready') {
+            isReady = true;
+            const btn = document.getElementById('sBtn');
+            btn.disabled = false;
+            btn.innerText = "제출 및 채점 시작";
+        }
+    };
 }
 
-// ── 채점 루프 ─────────────────────────────────────────────
-async function submitCode(prob) {
-    if (!pyodideReady) return;
+// 3. 채점 실행
+async function runJudge(userCode) {
+    if (!isReady) return;
 
-    const problem = window.PROBLEMS[prob];
-    const resBox  = document.getElementById(`resultBox-${prob}`);
-    const errLog  = document.getElementById(`errorLog-${prob}`);
-    const btn     = document.getElementById(`sBtn-${prob}`);
-    const code    = problem.editor.getValue();
-    const tcList  = problem.testCases;
+    const resBox = document.getElementById('resultBox');
+    const errLog = document.getElementById('errorLog');
+    const btn = document.getElementById('sBtn');
 
     resBox.style.display = 'block';
-    resBox.className     = 'result-display res-judging';
+    resBox.innerText = "채점 중...";
+    resBox.className = "result-display judging";
     errLog.style.display = 'none';
-    btn.disabled         = true;
+    btn.disabled = true;
 
-    for (let i = 0; i < tcList.length; i++) {
-        resBox.innerText = `채점 중 (${Math.floor(i / tcList.length * 100)}%) — ${i + 1}/${tcList.length}`;
-        const res = await runInWorker(code, tcList[i].in);
+    for (let i = 0; i < testCases.length; i++) {
+        const tc = testCases[i];
+        
+        const res = await new Promise(resolve => {
+            const id = Math.random().toString(36).substr(2, 9);
+            const handler = (e) => {
+                if (e.data.id === id) {
+                    pyodideWorker.removeEventListener('message', handler);
+                    resolve(e.data);
+                }
+            };
+            pyodideWorker.addEventListener('message', handler);
+            pyodideWorker.postMessage({ id, code: userCode, input: tc.in });
+        });
 
-        if (res.error || res.err) {
-            resBox.innerText  = '런타임 에러';
-            resBox.className  = 'result-display res-fail';
+        if (res.error || (res.err && res.err.length > 0)) {
+            showResult("런타임 에러", "fail");
             errLog.style.display = 'block';
-            errLog.innerText  = `케이스 ${i + 1} 런타임 에러\n\n${res.error || res.err}`;
-            btn.disabled = false;
-            return;
+            errLog.innerText = res.error || res.err;
+            btn.disabled = false; return;
         }
-        if (res.out !== tcList[i].out) {
-            resBox.innerText  = '틀렸습니다';
-            resBox.className  = 'result-display res-fail';
+
+        if (String(res.out).trim() !== String(tc.out).trim()) {
+            showResult(`틀렸습니다 (Case #${i+1})`, "fail");
             errLog.style.display = 'block';
-            const preview = tcList[i].in.length > 300
-                ? tcList[i].in.slice(0, 300) + '\n...(생략)'
-                : tcList[i].in;
-            errLog.innerText = `케이스 ${i + 1} 실패\n기댓값: ${tcList[i].out}\n실제값: ${res.out}\n\n입력 미리보기:\n${preview}`;
-            btn.disabled = false;
-            return;
+            errLog.innerText = `입력: ${tc.in}\n기댓값: ${tc.out}\n내 출력: ${res.out}`;
+            btn.disabled = false; return;
         }
     }
 
-    resBox.innerText = '맞았습니다!!';
-    resBox.className = 'result-display res-success';
+    showResult("맞았습니다!! 🎉", "success");
     btn.disabled = false;
 }
 
-// ── 탭 전환 ───────────────────────────────────────────────
-function switchProblem(prob) {
-    const problem = window.PROBLEMS[prob];
-
-    // 배낭처럼 지연 생성이 필요한 에디터: 페이지 보인 뒤 생성
-    if (!problem.editorCreated) {
-        document.querySelectorAll('.prob-page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-link-prob').forEach(a => a.classList.remove('active'));
-        document.getElementById(`page-${prob}`).classList.add('active');
-        document.getElementById(`tab-${prob}`).classList.add('active');
-
-        requestAnimationFrame(() => {
-            problem.editor = monaco.editor.create(
-                document.getElementById(`editor-${prob}`),
-                {
-                    value: problem.defaultCode,
-                    language: 'python',
-                    theme: 'vs-dark',
-                    automaticLayout: true,
-                    fontSize: 16,
-                    fontFamily: 'JetBrains Mono'
-                }
-            );
-            problem.editorCreated = true;
-            // Worker 준비됐으면 버튼도 바로 활성화
-            if (pyodideReady) {
-                document.getElementById(`sBtn-${prob}`).innerText  = '제출 및 채점 시작';
-                document.getElementById(`sBtn-${prob}`).disabled   = false;
-            }
-        });
-        return;
-    }
-
-    document.querySelectorAll('.prob-page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-link-prob').forEach(a => a.classList.remove('active'));
-    document.getElementById(`page-${prob}`).classList.add('active');
-    document.getElementById(`tab-${prob}`).classList.add('active');
-
-    requestAnimationFrame(() => {
-        if (problem.editor) problem.editor.layout();
-    });
-}
-
-// ── 초기화 ────────────────────────────────────────────────
-// 첫 번째 탭(토마토)은 페이지 로드 시 바로 에디터 생성
-function initJudge() {
-    const firstProb = Object.keys(window.PROBLEMS)[0];
-    const first     = window.PROBLEMS[firstProb];
-
-    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' } });
-    require(['vs/editor/editor.main'], function () {
-        first.editor = monaco.editor.create(
-            document.getElementById(`editor-${firstProb}`),
-            {
-                value: first.defaultCode,
-                language: 'python',
-                theme: 'vs-dark',
-                automaticLayout: true,
-                fontSize: 16,
-                fontFamily: 'JetBrains Mono'
-            }
-        );
-        first.editorCreated = true;
-    });
-
-    // 나머지 문제 TC 생성
-    Object.entries(window.PROBLEMS).forEach(([key, prob]) => {
-        prob.generateTC();
-    });
+function showResult(text, type) {
+    const resBox = document.getElementById('resultBox');
+    resBox.innerText = text;
+    resBox.className = `result-display ${type}`;
 }
