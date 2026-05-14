@@ -5,57 +5,17 @@
     <title>DevJudge Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
-    <style>
-        :root {
-            --bg-main: #0d1117;
-            --bg-card: #161b22;
-            --border-color: #30363d;
-            --accent-blue: #58a6ff;
-            --accent-dark-blue: #1f6feb;
-            --text-main: #c9d1d9;
-            --text-muted: #8b949e;
-        }
-        body { background-color: var(--bg-main); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; }
-        .navbar { background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); padding: 1rem 2rem; }
-        .navbar-brand { color: var(--accent-blue) !important; font-weight: 800; font-size: 1.5rem; letter-spacing: 1px; }
-        .nav-link-prob { color: var(--text-muted) !important; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.95rem; transition: 0.15s; cursor: pointer; }
-        .nav-link-prob:hover, .nav-link-prob.active { background-color: rgba(88,166,255,0.1); color: var(--accent-blue) !important; }
-        .container { max-width: 1100px; padding: 40px 20px; }
-        .problem-header { border-bottom: 1px solid var(--border-color); margin-bottom: 30px; padding-bottom: 10px; }
-        .problem-title { font-size: 2rem; font-weight: 600; color: white; }
-        .info-table { width: 100%; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 40px; overflow: hidden; }
-        .info-table th { background-color: rgba(48,54,61,0.5); color: var(--text-muted); font-weight: 500; padding: 12px; border-bottom: 1px solid var(--border-color); text-align: center; }
-        .info-table td { padding: 15px; text-align: center; border-bottom: 1px solid var(--border-color); font-weight: bold; }
-        .section-title { font-size: 1.4rem; font-weight: 600; color: white; margin-top: 50px; margin-bottom: 20px; display: flex; align-items: center; }
-        .section-title::before { content: ""; display: inline-block; width: 4px; height: 20px; background-color: var(--accent-blue); margin-right: 12px; border-radius: 2px; }
-        .content-box { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-bottom: 30px; font-size: 1.05rem; }
-        .example-header { font-weight: 600; margin-bottom: 10px; color: var(--accent-blue); }
-        .example-content { background-color: #010409; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; font-family: 'JetBrains Mono', monospace; color: #7ee787; white-space: pre-wrap; }
-        .submit-section { background-color: #161b22; border: 1px solid var(--accent-dark-blue); border-radius: 12px; padding: 30px; margin-top: 80px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        /* 에디터: display:none 대신 visibility+position으로 숨겨서 Monaco 높이 보존 */
-        .editor-wrap { height: 450px; border: 1px solid var(--border-color); border-radius: 6px; margin: 20px 0; }
-        .btn-submit { background-color: var(--accent-dark-blue); color: white; border: none; padding: 15px; font-weight: 700; font-size: 1.2rem; border-radius: 6px; transition: 0.2s; width: 100%; }
-        .btn-submit:hover { background-color: #388bfd; }
-        .btn-submit:disabled { background-color: #21262d; color: #8b949e; cursor: not-allowed; }
-        .result-display { margin-top: 25px; padding: 20px; border-radius: 8px; text-align: center; font-size: 1.8rem; font-weight: 800; display: none; }
-        .res-judging { color: #e3b341; background: rgba(227,179,65,0.1); border: 1px solid rgba(227,179,65,0.3); }
-        .res-success { color: #3fb950; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
-        .res-fail    { color: #f85149; background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); }
-        .error-log   { display:none; margin-top:20px; padding:15px; background:#21262d; border:1px solid #f85149; color:#f85149; border-radius:6px; font-family:monospace; white-space:pre-wrap; }
-        /* 탭 페이지: display:none 사용하면 Monaco가 높이 0으로 초기화되므로 visibility로 관리 */
-        .prob-page { display: none; }
-        .prob-page.active { display: block; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <nav class="navbar d-flex align-items-center gap-4">
     <span class="navbar-brand">DEVJUDGE <span style="color:white">PRO</span></span>
-    <a class="nav-link-prob active" id="tab-tomato"    onclick="switchProblem('tomato')">7576. 토마토</a>
-    <a class="nav-link-prob"        id="tab-knapsack"  onclick="switchProblem('knapsack')">12865. 평범한 배낭</a>
+    <a class="nav-link-prob active" id="tab-tomato"   onclick="switchProblem('tomato')">7576. 토마토</a>
+    <a class="nav-link-prob"        id="tab-knapsack" onclick="switchProblem('knapsack')">12865. 평범한 배낭</a>
 </nav>
 
-<!-- ══════════ 토마토 ══════════ -->
+<!-- ══════════ 7576. 토마토 ══════════ -->
 <div class="prob-page active" id="page-tomato">
 <div class="container">
     <div class="problem-header">
@@ -66,32 +26,54 @@
         <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
         <tbody><tr><td>2 초</td><td>256 MB</td><td id="tcCountTomato">생성 중...</td><td>100 점</td></tr></tbody>
     </table>
+
     <div class="section-title">문제</div>
-    <div class="content-box">철수의 토마토 농장에서는 토마토를 보관하는 큰 창고를 가지고 있다. 보관 후 하루가 지나면, 익은 토마토들의 인접한 곳(상하좌우)에 있는 익지 않은 토마토들이 익게 된다. 며칠이 지나면 토마토들이 모두 익게 되는지, 그 최소 일수를 구하는 프로그램을 작성하시오.</div>
-    <div class="section-title">입력</div>
-    <div class="content-box">첫 줄에는 상자의 크기를 나타내는 두 정수 M, N이 주어진다. (2 ≤ M, N ≤ 1,000) 둘째 줄부터는 상자에 담긴 토마토의 정보가 주어진다. 1은 익은 토마토, 0은 익지 않은 토마토, -1은 토마토가 들어있지 않은 칸을 나타낸다.</div>
-    <div class="section-title">출력</div>
-    <div class="content-box">토마토가 모두 익을 때까지의 최소 날짜를 출력한다. 만약 처음부터 다 익어있으면 0, 모두 익지 못하는 상황이면 -1을 출력한다.</div>
-    <div class="row g-4">
-        <div class="col-md-6"><div class="example-header">예제 입력 1</div><div class="example-content">6 4
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 1</div></div>
-        <div class="col-md-6"><div class="example-header">예제 출력 1</div><div class="example-content">8</div></div>
+    <div class="content-box">
+        철수의 토마토 농장에서는 토마토를 보관하는 큰 창고를 가지고 있다.
+        보관 후 하루가 지나면, 익은 토마토들의 인접한 곳(상하좌우)에 있는 익지 않은 토마토들이 익게 된다.
+        며칠이 지나면 토마토들이 모두 익게 되는지, 그 최소 일수를 구하는 프로그램을 작성하시오.
     </div>
+
+    <div class="section-title">입력</div>
+    <div class="content-box">
+        첫 줄에는 상자의 크기를 나타내는 두 정수 M, N이 주어진다. (2 ≤ M, N ≤ 1,000)<br>
+        둘째 줄부터는 상자에 담긴 토마토의 정보가 주어진다.
+        1은 익은 토마토, 0은 익지 않은 토마토, -1은 토마토가 들어있지 않은 칸을 나타낸다.
+    </div>
+
+    <div class="section-title">출력</div>
+    <div class="content-box">
+        토마토가 모두 익을 때까지의 최소 날짜를 출력한다.
+        만약 처음부터 다 익어있으면 0, 모두 익지 못하는 상황이면 -1을 출력한다.
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="example-header">예제 입력 1</div>
+            <div class="example-content">6 4
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 1</div>
+        </div>
+        <div class="col-md-6">
+            <div class="example-header">예제 출력 1</div>
+            <div class="example-content">8</div>
+        </div>
+    </div>
+
     <div class="submit-section">
         <h3 style="color:white;font-weight:700;margin-bottom:5px;">Source Code</h3>
         <p class="text-muted">언어: Python 3 (Pyodide v0.25.0)</p>
         <div class="editor-wrap" id="editor-tomato"></div>
         <button id="sBtn-tomato" class="btn-submit" onclick="submitCode('tomato')" disabled>서버 로딩 및 케이스 생성 중...</button>
         <div id="resultBox-tomato" class="result-display"></div>
-        <div id="errorLog-tomato" class="error-log"></div>
+        <div id="errorLog-tomato"  class="error-log"></div>
     </div>
 </div>
 </div>
 
-<!-- ══════════ 배낭 ══════════ -->
+<!-- ══════════ 12865. 평범한 배낭 ══════════ -->
 <div class="prob-page" id="page-knapsack">
 <div class="container">
     <div class="problem-header">
@@ -102,368 +84,58 @@
         <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
         <tbody><tr><td>2 초</td><td>512 MB</td><td id="tcCountKnapsack">생성 중...</td><td>100 점</td></tr></tbody>
     </table>
+
     <div class="section-title">문제</div>
-    <div class="content-box">이 문제는 아주 평범한 배낭에 관한 문제이다.<br><br>준서가 여행에 필요하다고 생각하는 N개의 물건이 있다. 각 물건은 무게 W와 가치 V를 가지는데, 해당 물건을 배낭에 넣어서 가면 준서가 V만큼 즐길 수 있다. 아직 행군을 해본 적이 없는 준서는 최대 K만큼의 무게만을 넣을 수 있는 배낭만 들고 다닐 수 있다. 준서가 최대한 즐거운 여행을 하기 위해 배낭에 넣을 수 있는 물건들의 가치의 최댓값을 알려주자.</div>
+    <div class="content-box">
+        이 문제는 아주 평범한 배낭에 관한 문제이다.<br><br>
+        준서가 여행에 필요하다고 생각하는 N개의 물건이 있다. 각 물건은 무게 W와 가치 V를 가지는데,
+        해당 물건을 배낭에 넣어서 가면 준서가 V만큼 즐길 수 있다.
+        아직 행군을 해본 적이 없는 준서는 최대 K만큼의 무게만을 넣을 수 있는 배낭만 들고 다닐 수 있다.
+        준서가 최대한 즐거운 여행을 하기 위해 배낭에 넣을 수 있는 물건들의 가치의 최댓값을 알려주자.
+    </div>
+
     <div class="section-title">입력</div>
-    <div class="content-box">첫 줄에 물품의 수 N(1 ≤ N ≤ 100)과 준서가 버틸 수 있는 무게 K(1 ≤ K ≤ 100,000)가 주어진다.<br>두 번째 줄부터 N개의 줄에 걸쳐 각 물건의 무게 W(1 ≤ W ≤ 100,000)와 해당 물건의 가치 V(0 ≤ V ≤ 1,000)가 주어진다.</div>
+    <div class="content-box">
+        첫 줄에 물품의 수 N(1 ≤ N ≤ 100)과 준서가 버틸 수 있는 무게 K(1 ≤ K ≤ 100,000)가 주어진다.<br>
+        두 번째 줄부터 N개의 줄에 걸쳐 각 물건의 무게 W(1 ≤ W ≤ 100,000)와 해당 물건의 가치 V(0 ≤ V ≤ 1,000)가 주어진다.
+    </div>
+
     <div class="section-title">출력</div>
     <div class="content-box">한 줄에 배낭에 넣을 수 있는 물건들의 가치합의 최댓값을 출력한다.</div>
+
     <div class="row g-4">
-        <div class="col-md-6"><div class="example-header">예제 입력 1</div><div class="example-content">4 7
+        <div class="col-md-6">
+            <div class="example-header">예제 입력 1</div>
+            <div class="example-content">4 7
 6 13
 4 8
 3 6
-5 12</div></div>
-        <div class="col-md-6"><div class="example-header">예제 출력 1</div><div class="example-content">14</div></div>
+5 12</div>
+        </div>
+        <div class="col-md-6">
+            <div class="example-header">예제 출력 1</div>
+            <div class="example-content">14</div>
+        </div>
     </div>
+
     <div class="submit-section">
         <h3 style="color:white;font-weight:700;margin-bottom:5px;">Source Code</h3>
         <p class="text-muted">언어: Python 3 (Pyodide v0.25.0)</p>
         <div class="editor-wrap" id="editor-knapsack"></div>
         <button id="sBtn-knapsack" class="btn-submit" onclick="submitCode('knapsack')" disabled>서버 로딩 및 케이스 생성 중...</button>
         <div id="resultBox-knapsack" class="result-display"></div>
-        <div id="errorLog-knapsack" class="error-log"></div>
+        <div id="errorLog-knapsack"  class="error-log"></div>
     </div>
 </div>
 </div>
 
+<!-- 문제 파일 먼저 → judge.js 마지막 (PROBLEMS 레지스트리 완성 후 initJudge 호출) -->
+<script src="problems/tomato.js"></script>
+<script src="problems/knapsack.js"></script>
+<script src="judge.js"></script>
 <script>
-// ═══════════════════════════════════════════
-//  공통 유틸
-// ═══════════════════════════════════════════
-function seededRand(seed) {
-    let s = seed >>> 0;
-    return () => { s = Math.imul(s, 1664525) + 1013904223 >>> 0; return s / 0x100000000; };
-}
-
-// ═══════════════════════════════════════════
-//  토마토 — solver + TC 생성
-// ═══════════════════════════════════════════
-const tomatoTC = [];
-
-function solveTomato(m, n, grid) {
-    const g = grid.map(r => [...r]);
-    const q = []; let head = 0, totalZero = 0;
-    for (let y = 0; y < n; y++)
-        for (let x = 0; x < m; x++) {
-            if (g[y][x] === 1) q.push(x, y, 0);
-            if (g[y][x] === 0) totalZero++;
-        }
-    if (totalZero === 0) return 0;
-    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-    let result = 0, filled = 0;
-    while (head < q.length) {
-        const x = q[head++], y = q[head++], d = q[head++];
-        for (const [dx,dy] of dirs) {
-            const nx = x+dx, ny = y+dy;
-            if (nx>=0&&nx<m&&ny>=0&&ny<n&&g[ny][nx]===0) {
-                g[ny][nx]=1; filled++; result=d+1; q.push(nx,ny,d+1);
-            }
-        }
-    }
-    return filled===totalZero ? result : -1;
-}
-
-function addTomato(m, n, grid) {
-    tomatoTC.push({ in: `${m} ${n}\n`+grid.map(r=>r.join(' ')).join('\n'), out: String(solveTomato(m,n,grid)) });
-}
-
-function randomTomatoGrid(m, n, seed, ripe, empty) {
-    const rand = seededRand(seed);
-    return Array.from({length:n}, ()=>Array.from({length:m}, ()=>{ const r=rand(); return r<ripe?1:r<ripe+empty?-1:0; }));
-}
-
-function generateTomatoTC() {
-    tomatoTC.length = 0;
-    // A. 공식 예제 (3)
-    addTomato(6,4,[[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,1]]);
-    addTomato(6,4,[[0,-1,0,0,0,0],[-1,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,1]]);
-    addTomato(6,4,[[1,-1,0,0,0,0],[0,-1,0,0,0,0],[0,0,0,0,-1,0],[0,0,0,0,-1,1]]);
-    // B. 2×2 경계값 (8)
-    addTomato(2,2,[[1,1],[1,1]]); addTomato(2,2,[[0,0],[0,0]]); addTomato(2,2,[[-1,-1],[-1,-1]]);
-    addTomato(2,2,[[1,0],[0,0]]); addTomato(2,2,[[1,-1],[-1,0]]); addTomato(2,2,[[-1,0],[0,1]]);
-    addTomato(2,2,[[1,0],[0,-1]]); addTomato(2,2,[[-1,1],[0,-1]]);
-    // C. 직선/비율 극단 (6)
-    {const g=Array.from({length:2},()=>Array(1000).fill(0));g[0][0]=1;addTomato(1000,2,g);}
-    {const g=Array.from({length:2},()=>Array(1000).fill(0));g[0][999]=1;addTomato(1000,2,g);}
-    {const g=Array.from({length:1000},()=>Array(2).fill(0));g[0][0]=1;addTomato(2,1000,g);}
-    {const g=Array.from({length:2},()=>Array(20).fill(0));g[0][0]=1;g[0][10]=-1;g[1][10]=-1;addTomato(20,2,g);}
-    {const g=Array.from({length:2},()=>Array(500).fill(0));g[0][249]=1;addTomato(500,2,g);}
-    {const g=Array.from({length:500},()=>Array(2).fill(0));g[249][0]=1;addTomato(2,500,g);}
-    // D. 멀티소스 (6)
-    {const g=Array.from({length:20},()=>Array(20).fill(0));g[0][0]=1;g[19][19]=1;addTomato(20,20,g);}
-    {const g=Array.from({length:20},()=>Array(20).fill(0));g[0][0]=1;g[0][19]=1;g[19][0]=1;g[19][19]=1;addTomato(20,20,g);}
-    {const g=Array.from({length:10},()=>Array(10).fill(0));for(let i=0;i<10;i++){g[0][i]=1;g[9][i]=1;g[i][0]=1;g[i][9]=1;}addTomato(10,10,g);}
-    {const g=Array.from({length:10},()=>Array(10).fill(0));for(let y=0;y<10;y++)for(let x=0;x<10;x++)if((x+y)%3===0)g[y][x]=1;addTomato(10,10,g);}
-    {const g=Array.from({length:15},()=>Array(15).fill(0));g[0][0]=1;g[7][7]=1;g[14][14]=1;g[3][3]=-1;g[3][4]=-1;g[4][3]=-1;addTomato(15,15,g);}
-    {const g=Array.from({length:21},()=>Array(21).fill(0));g[10][10]=1;addTomato(21,21,g);}
-    // E. 고립/장벽 (8)
-    {const g=Array.from({length:10},()=>Array(10).fill(0));for(let y=0;y<10;y++)g[y][5]=-1;g[0][0]=1;addTomato(10,10,g);}
-    {const g=Array.from({length:10},()=>Array(10).fill(0));for(let x=0;x<10;x++)g[5][x]=-1;g[0][0]=1;addTomato(10,10,g);}
-    {const g=Array.from({length:10},()=>Array(10).fill(0));for(let i=2;i<=7;i++){g[2][i]=-1;g[7][i]=-1;g[i][2]=-1;g[i][7]=-1;}g[0][0]=1;addTomato(10,10,g);}
-    {const g=Array.from({length:10},()=>Array(10).fill(-1));for(let x=0;x<10;x++){g[0][x]=0;g[9][x]=0;}for(let y=0;y<10;y++){g[y][0]=0;g[y][9]=0;}g[0][0]=1;addTomato(10,10,g);}
-    {const m=11,n=5;const g=Array.from({length:n},()=>Array(m).fill(-1));for(let x=0;x<m;x++)g[0][x]=0;g[0][0]=1;for(let y=0;y<n;y++)g[y][m-1]=0;for(let x=0;x<m;x++)g[n-1][x]=0;for(let y=0;y<n;y++)g[y][0]=0;addTomato(m,n,g);}
-    {const g=Array.from({length:5},()=>Array(5).fill(0));for(let y=0;y<5;y++)for(let x=0;x<5;x++)if((x+y)%2===0)g[y][x]=-1;g[1][0]=1;addTomato(5,5,g);}
-    {const g=Array.from({length:10},()=>Array(20).fill(-1));for(let y=0;y<10;y++)for(let x=0;x<9;x++)g[y][x]=0;for(let y=0;y<10;y++)for(let x=11;x<20;x++)g[y][x]=0;g[5][9]=0;g[0][0]=1;addTomato(20,10,g);}
-    {const g=Array.from({length:7},()=>Array(7).fill(0));for(let i=0;i<7;i++){g[0][i]=-1;g[6][i]=-1;g[i][0]=-1;g[i][6]=-1;}g[3][3]=1;addTomato(7,7,g);}
-    // F. 극단 단순 (5)
-    addTomato(100,100,Array.from({length:100},()=>Array(100).fill(1)));
-    addTomato(100,100,Array.from({length:100},()=>Array(100).fill(0)));
-    addTomato(100,100,Array.from({length:100},()=>Array(100).fill(-1)));
-    {const g=Array.from({length:10},()=>Array(10).fill(-1));g[5][5]=0;addTomato(10,10,g);}
-    {const g=Array.from({length:10},()=>Array(10).fill(-1));g[5][5]=1;addTomato(10,10,g);}
-    // G. 시드 고정 랜덤 (15)
-    [[10,10,1,0.1,0.1],[10,10,2,0.0,0.3],[20,20,3,0.05,0.2],[20,20,4,0.15,0.0],
-     [30,30,5,0.1,0.1],[50,50,6,0.05,0.15],[50,50,7,0.2,0.05],[100,100,8,0.03,0.1],
-     [100,100,9,0.1,0.1],[150,150,10,0.05,0.05],[200,200,11,0.02,0.2],
-     [300,300,12,0.03,0.1],[400,400,13,0.01,0.05],[500,500,14,0.02,0.1],[700,700,15,0.01,0.05]
-    ].forEach(([m,n,s,r,e])=>addTomato(m,n,randomTomatoGrid(m,n,s,r,e)));
-    // H. 최대 크기 스트레스 (9)
-    {const g=Array.from({length:1000},()=>Array(1000).fill(0));g[0][0]=1;addTomato(1000,1000,g);}
-    {const g=Array.from({length:1000},()=>Array(1000).fill(0));g[999][999]=1;addTomato(1000,1000,g);}
-    {const g=Array.from({length:1000},()=>Array(1000).fill(0));g[500][500]=1;addTomato(1000,1000,g);}
-    addTomato(1000,1000,Array.from({length:1000},()=>Array(1000).fill(1)));
-    addTomato(1000,1000,Array.from({length:1000},()=>Array(1000).fill(0)));
-    addTomato(1000,1000,Array.from({length:1000},()=>Array(1000).fill(-1)));
-    {const g=Array.from({length:1000},()=>Array(1000).fill(0));for(let y=0;y<1000;y++)g[y][500]=-1;g[0][0]=1;addTomato(1000,1000,g);}
-    {const g=Array.from({length:1000},()=>Array(1000).fill(0));g[0][0]=1;g[0][999]=1;g[999][0]=1;g[999][999]=1;addTomato(1000,1000,g);}
-    addTomato(1000,1000,randomTomatoGrid(1000,1000,9999,0.01,0.1));
-
-    document.getElementById('tcCountTomato').innerText = `총 ${tomatoTC.length}개`;
-}
-
-// ═══════════════════════════════════════════
-//  배낭 — solver + TC 생성
-// ═══════════════════════════════════════════
-const knapsackTC = [];
-
-function solveKnapsack(n, k, items) {
-    const dp = new Int32Array(k + 1);
-    for (const [w, v] of items)
-        for (let j = k; j >= w; j--)
-            if (dp[j-w]+v > dp[j]) dp[j] = dp[j-w]+v;
-    return dp[k];
-}
-
-function addKnapsack(n, k, items) {
-    knapsackTC.push({ in: `${n} ${k}\n`+items.map(([w,v])=>`${w} ${v}`).join('\n'), out: String(solveKnapsack(n,k,items)) });
-}
-
-function randomKnapsack(n, k, seed, maxW, maxV) {
-    const rand = seededRand(seed);
-    return Array.from({length:n}, ()=>[Math.max(1,Math.floor(rand()*maxW)), Math.floor(rand()*(maxV+1))]);
-}
-
-function generateKnapsackTC() {
-    knapsackTC.length = 0;
-    // A. 공식 예제 (2)
-    addKnapsack(4,7,[[6,13],[4,8],[3,6],[5,12]]);
-    addKnapsack(4,7,[[5,12],[3,6],[4,8],[6,13]]);
-    // B. 경계값 (10)
-    addKnapsack(1,10,[[10,100]]);
-    addKnapsack(1,5,[[10,100]]);
-    addKnapsack(1,1,[[1,1000]]);
-    addKnapsack(3,3,[[4,10],[5,20],[6,30]]);
-    addKnapsack(3,5,[[5,10],[5,20],[5,30]]);
-    addKnapsack(3,10,[[1,0],[2,0],[3,0]]);
-    addKnapsack(5,1,[[1,5],[1,3],[1,8],[1,1],[2,100]]);
-    addKnapsack(100,1,Array.from({length:100},(_,i)=>[1,i+1]));
-    addKnapsack(4,10,[[3,5],[7,8],[10,100],[4,3]]);
-    addKnapsack(3,9,[[3,5],[3,5],[3,5]]);
-    // C. 그리디 함정 (5)
-    addKnapsack(3,10,[[5,3],[5,3],[8,10]]);
-    addKnapsack(3,10,[[6,7],[4,5],[3,4]]);
-    addKnapsack(4,2,[[1,1],[1,5],[1,5],[1,1]]);
-    addKnapsack(4,10,[[9,9],[6,6],[4,5],[3,4]]);
-    addKnapsack(4,7,[[7,10],[3,6],[3,6],[1,3]]);
-    // D. 중복 무게·가치 (4)
-    addKnapsack(5,6,[[2,3],[2,5],[2,4],[2,7],[2,2]]);
-    addKnapsack(5,7,[[1,10],[2,10],[3,10],[4,10],[5,10]]);
-    addKnapsack(5,8,[[3,5],[3,5],[3,5],[3,5],[3,5]]);
-    addKnapsack(6,10,[[1,6],[2,5],[3,8],[4,9],[5,7],[6,4]]);
-    // E. 최대값 경계 (5)
-    addKnapsack(100,100000,randomKnapsack(100,100000,1,100000,1000));
-    addKnapsack(100,100,Array.from({length:100},()=>[1,1000]));
-    addKnapsack(5,99999,Array.from({length:5},(_,i)=>[100000,(i+1)*100]));
-    addKnapsack(1,100000,[[100000,1000]]);
-    addKnapsack(10,5,Array.from({length:10},(_,i)=>[[6,7,8,9,10,11,12,13,14,15][i],(i+1)*50]));
-    // F. 시드 고정 랜덤 (24)
-    [[5,10,101,10,100],[5,50,102,50,500],[10,20,103,20,200],[10,100,104,100,1000],
-     [15,30,105,30,300],[15,200,106,200,800],[50,500,201,1000,500],[50,1000,202,500,1000],
-     [50,50000,203,50000,1000],[75,10000,204,10000,800],[75,75000,205,75000,600],
-     [100,1000,206,1000,1000],[100,10000,301,10000,1000],[100,50000,302,50000,1000],
-     [100,99999,303,99999,1000],[100,100000,304,100000,1000],[100,1000,401,10,1000],
-     [100,5000,402,50,1000],[100,1000,501,100000,1000],[100,10000,502,100000,1000],
-     [30,500,601,500,1000],[30,500,602,500,500],[80,30000,701,30000,1000],[90,70000,702,70000,900]
-    ].forEach(([n,k,seed,maxW,maxV])=>addKnapsack(n,k,randomKnapsack(n,k,seed,maxW,maxV)));
-    // G. 스트레스 (10)
-    for(let s=1001;s<=1010;s++) addKnapsack(100,100000,randomKnapsack(100,100000,s,100000,1000));
-
-    document.getElementById('tcCountKnapsack').innerText = `총 ${knapsackTC.length}개`;
-}
-
-// ═══════════════════════════════════════════
-//  Pyodide Worker
-// ═══════════════════════════════════════════
-const workerSrc = `
-importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
-let pyodide;
-async function load(){ pyodide=await loadPyodide(); postMessage({type:'ready'}); }
-self.onmessage=async(e)=>{
-    const{id,code,input}=e.data;
-    try{
-        pyodide.globals.set("user_code",code);
-        pyodide.globals.set("input_data",input);
-        const w=\`
-import sys,io,traceback
-class MockStdin:
-    def __init__(self,d): self.lines=d.splitlines(True); self.idx=0
-    def readline(self):
-        if self.idx<len(self.lines):
-            r=self.lines[self.idx]; self.idx+=1; return r
-        return ""
-    def read(self):
-        r="".join(self.lines[self.idx:]); self.idx=len(self.lines); return r
-sys.stdin=MockStdin(input_data)
-sys.stdout=io.StringIO()
-sys.stderr=io.StringIO()
-try:
-    exec(user_code,{'__name__':'__main__'})
-except Exception:
-    traceback.print_exc(file=sys.stderr)
-[sys.stdout.getvalue(),sys.stderr.getvalue()]
-\`;
-        const res=await pyodide.runPythonAsync(w);
-        postMessage({id,out:res.toJs()[0].trim(),err:res.toJs()[1].trim()});
-    }catch(err){postMessage({id,error:err.message});}
-};
-load();
-`;
-const pyodideWorker = new Worker(URL.createObjectURL(new Blob([workerSrc],{type:'application/javascript'})));
-let pyodideReady = false;
-
-pyodideWorker.onmessage = (e) => {
-    if (e.data.type === 'ready') {
-        pyodideReady = true;
-        ['tomato','knapsack'].forEach(p => {
-            const btn = document.getElementById(`sBtn-${p}`);
-            btn.innerText = '제출 및 채점 시작';
-            btn.disabled = false;
-        });
-    }
-};
-
-function runInWorker(code, input) {
-    return new Promise(resolve => {
-        const id = Math.random().toString(36).substr(2,9);
-        const h = (e) => { if(e.data.id===id){ pyodideWorker.removeEventListener('message',h); resolve(e.data); } };
-        pyodideWorker.addEventListener('message', h);
-        pyodideWorker.postMessage({id, code, input});
-    });
-}
-
-// ═══════════════════════════════════════════
-//  채점
-// ═══════════════════════════════════════════
-async function submitCode(prob) {
-    if (!pyodideReady) return;
-    const tcList = prob==='tomato' ? tomatoTC : knapsackTC;
-    const inst   = prob==='tomato' ? editorTomato : editorKnapsack;
-    const resBox = document.getElementById(`resultBox-${prob}`);
-    const errLog = document.getElementById(`errorLog-${prob}`);
-    const btn    = document.getElementById(`sBtn-${prob}`);
-
-    resBox.style.display='block'; resBox.className='result-display res-judging';
-    errLog.style.display='none'; btn.disabled=true;
-
-    for (let i=0; i<tcList.length; i++) {
-        resBox.innerText=`채점 중 (${Math.floor(i/tcList.length*100)}%) — ${i+1}/${tcList.length}`;
-        const res = await runInWorker(inst.getValue(), tcList[i].in);
-        if (res.error||res.err) {
-            resBox.innerText='런타임 에러'; resBox.className='result-display res-fail';
-            errLog.style.display='block';
-            errLog.innerText=`케이스 ${i+1} 런타임 에러\n\n${res.error||res.err}`;
-            btn.disabled=false; return;
-        }
-        if (res.out!==tcList[i].out) {
-            resBox.innerText='틀렸습니다'; resBox.className='result-display res-fail';
-            errLog.style.display='block';
-            const preview=tcList[i].in.length>300?tcList[i].in.slice(0,300)+'\n...(생략)':tcList[i].in;
-            errLog.innerText=`케이스 ${i+1} 실패\n기댓값: ${tcList[i].out}\n실제값: ${res.out}\n\n입력 미리보기:\n${preview}`;
-            btn.disabled=false; return;
-        }
-    }
-    resBox.innerText='맞았습니다!!'; resBox.className='result-display res-success';
-    btn.disabled=false;
-}
-
-// ═══════════════════════════════════════════
-//  탭 전환 — display:none 대신 visibility로 처리해서
-//  Monaco가 DOM에서 사라지지 않도록 유지
-// ═══════════════════════════════════════════
-function switchProblem(prob) {
-    document.querySelectorAll('.prob-page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-link-prob').forEach(a => a.classList.remove('active'));
-    document.getElementById(`page-${prob}`).classList.add('active');
-    document.getElementById(`tab-${prob}`).classList.add('active');
-    // 탭 전환 후 Monaco 레이아웃 재계산
-    requestAnimationFrame(() => {
-        if (prob==='tomato'   && editorTomato)   editorTomato.layout();
-        if (prob==='knapsack' && editorKnapsack) editorKnapsack.layout();
-    });
-}
-
-// ═══════════════════════════════════════════
-//  Monaco 에디터 초기화
-//  배낭 페이지가 display:none 상태에서 생성되면
-//  높이 0이 되므로, 토마토 에디터를 먼저 만들고
-//  배낭 에디터는 탭 첫 방문 시 지연 생성
-// ═══════════════════════════════════════════
-let editorTomato = null, editorKnapsack = null;
-let knapsackEditorCreated = false;
-
-require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
-require(['vs/editor/editor.main'], function() {
-    editorTomato = monaco.editor.create(document.getElementById('editor-tomato'), {
-        value: "import sys\nfrom collections import deque\ninput = sys.stdin.readline\n\n# 코드를 작성해 보세요\n",
-        language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 16, fontFamily: 'JetBrains Mono'
-    });
-});
-
-// 배낭 탭 첫 방문 시 에디터 생성
-const _origSwitch = window.switchProblem;
-window.switchProblem = function(prob) {
-    // 배낭 탭 첫 클릭 시 에디터 생성
-    if (prob === 'knapsack' && !knapsackEditorCreated) {
-        knapsackEditorCreated = true;
-        // 페이지를 먼저 보이게 한 뒤 생성해야 높이가 잡힘
-        document.getElementById('page-knapsack').classList.add('active');
-        document.getElementById('tab-knapsack').classList.add('active');
-        document.getElementById('page-tomato').classList.remove('active');
-        document.getElementById('tab-tomato').classList.remove('active');
-        requestAnimationFrame(() => {
-            editorKnapsack = monaco.editor.create(document.getElementById('editor-knapsack'), {
-                value: "import sys\ninput = sys.stdin.readline\n\n# 코드를 작성해 보세요\n",
-                language: 'python', theme: 'vs-dark', automaticLayout: true, fontSize: 16, fontFamily: 'JetBrains Mono'
-            });
-        });
-        return;
-    }
-    document.querySelectorAll('.prob-page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-link-prob').forEach(a => a.classList.remove('active'));
-    document.getElementById(`page-${prob}`).classList.add('active');
-    document.getElementById(`tab-${prob}`).classList.add('active');
-    requestAnimationFrame(() => {
-        if (prob==='tomato'   && editorTomato)   editorTomato.layout();
-        if (prob==='knapsack' && editorKnapsack) editorKnapsack.layout();
-    });
-};
-
-// ═══════════════════════════════════════════
-//  초기화
-// ═══════════════════════════════════════════
-generateTomatoTC();
-generateKnapsackTC();
+    initJudge();
 </script>
+
 </body>
 </html>
