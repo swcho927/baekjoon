@@ -19,14 +19,12 @@
             --success-green: #238636;
             --fail-red: #da3633;
         }
-
         body {
             background-color: var(--bg-main);
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             line-height: 1.6;
         }
-
         .navbar {
             background-color: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
@@ -38,16 +36,13 @@
             font-size: 1.5rem;
             letter-spacing: 1px;
         }
-
         .container { max-width: 1100px; padding: 40px 20px; }
-
         .problem-header {
             border-bottom: 1px solid var(--border-color);
             margin-bottom: 30px;
             padding-bottom: 10px;
         }
         .problem-title { font-size: 2rem; font-weight: 600; color: white; }
-
         .info-table {
             width: 100%;
             background-color: var(--bg-card);
@@ -70,7 +65,6 @@
             border-bottom: 1px solid var(--border-color);
             font-weight: bold;
         }
-
         .section-title {
             font-size: 1.4rem;
             font-weight: 600;
@@ -89,7 +83,6 @@
             margin-right: 12px;
             border-radius: 2px;
         }
-
         .content-box {
             background-color: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -98,7 +91,6 @@
             margin-bottom: 30px;
             font-size: 1.05rem;
         }
-
         .example-header { font-weight: 600; margin-bottom: 10px; color: var(--accent-blue); }
         .example-content {
             background-color: #010409;
@@ -109,7 +101,6 @@
             color: #7ee787;
             white-space: pre-wrap;
         }
-
         .submit-section {
             background-color: #161b22;
             border: 1px solid var(--accent-dark-blue);
@@ -136,7 +127,6 @@
         }
         .btn-submit:hover { background-color: #388bfd; }
         .btn-submit:disabled { background-color: #21262d; color: #8b949e; cursor: not-allowed; }
-
         .result-display {
             margin-top: 25px;
             padding: 20px;
@@ -148,7 +138,7 @@
         }
         .res-judging { color: #e3b341; background: rgba(227, 179, 65, 0.1); border: 1px solid rgba(227, 179, 65, 0.3); }
         .res-success { color: #3fb950; background: rgba(63, 185, 80, 0.1); border: 1px solid rgba(63, 185, 80, 0.3); }
-        .res-fail { color: #f85149; background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); }
+        .res-fail    { color: #f85149; background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); }
     </style>
 </head>
 <body>
@@ -205,11 +195,8 @@
     <div class="submit-section">
         <h3 style="color: white; font-weight: 700; margin-bottom: 5px;">Source Code</h3>
         <p class="text-muted">언어: Python 3 (Pyodide v0.25.0)</p>
-        
         <div id="editor"></div>
-        
         <button id="sBtn" class="btn-submit w-100" onclick="submitCode()" disabled>서버 로딩 및 케이스 생성 중...</button>
-        
         <div id="resultBox" class="result-display"></div>
         <div id="errorLog" style="display:none; margin-top:20px; padding:15px; background:#21262d; border:1px solid #f85149; color:#f85149; border-radius:6px; font-family: monospace; white-space: pre-wrap;"></div>
     </div>
@@ -221,24 +208,31 @@
     let pyodideReady = false;
     const testCases = [];
 
-    // -------------------------------------------------------
-    // 정석 테스트케이스 생성기
-    // 핵심 원칙: 정답을 JS BFS로 직접 계산 → 하드코딩 금지
-    // -------------------------------------------------------
+    // ─────────────────────────────────────────────────────────
+    // 핵심 원칙
+    //  1) 정답은 항상 JS BFS로 직접 계산 — 하드코딩 절대 금지
+    //  2) 카테고리별로 빠짐없이 커버
+    //     A. 문제 공식 예제
+    //     B. 경계값 (최소 크기, 극단 입력)
+    //     C. 특수 구조 (직선, 비직사각형 비율)
+    //     D. 멀티소스 BFS
+    //     E. 고립 / 장벽 패턴 (-1 활용)
+    //     F. 전부 -1 / 전부 0 / 전부 1 등 단순 극단
+    //     G. 시드 고정 랜덤 (소형 ~ 대형)
+    //     H. 최대 크기 스트레스 테스트
+    // ─────────────────────────────────────────────────────────
 
     function solveAnswer(m, n, grid) {
-        // JS BFS로 정답을 직접 계산
         const g = grid.map(r => [...r]);
         const queue = [];
         let head = 0;
         let totalZero = 0;
 
-        for (let y = 0; y < n; y++) {
+        for (let y = 0; y < n; y++)
             for (let x = 0; x < m; x++) {
-                if (g[y][x] === 1) queue.push([x, y, 0]);
+                if (g[y][x] === 1) queue.push(x, y, 0);
                 if (g[y][x] === 0) totalZero++;
             }
-        }
 
         if (totalZero === 0) return 0;
 
@@ -247,18 +241,17 @@
         let filled = 0;
 
         while (head < queue.length) {
-            const [x, y, d] = queue[head++];
+            const x = queue[head++], y = queue[head++], d = queue[head++];
             for (const [dx, dy] of dirs) {
                 const nx = x + dx, ny = y + dy;
                 if (nx >= 0 && nx < m && ny >= 0 && ny < n && g[ny][nx] === 0) {
                     g[ny][nx] = 1;
                     filled++;
                     result = d + 1;
-                    queue.push([nx, ny, d + 1]);
+                    queue.push(nx, ny, d + 1);
                 }
             }
         }
-
         return filled === totalZero ? result : -1;
     }
 
@@ -271,10 +264,32 @@
         testCases.push({ in: makeInput(m, n, grid), out: String(ans) });
     }
 
+    function seededRand(seed) {
+        let s = seed >>> 0;
+        return () => {
+            s = Math.imul(s, 1664525) + 1013904223 >>> 0;
+            return s / 0x100000000;
+        };
+    }
+
+    function randomGrid(m, n, seed, ripe, empty) {
+        // ripe  = 익은 토마토 비율 (0~1)
+        // empty = 빈 칸(-1) 비율 (0~1)
+        const rand = seededRand(seed);
+        return Array.from({length: n}, () =>
+            Array.from({length: m}, () => {
+                const r = rand();
+                if (r < ripe)        return 1;
+                if (r < ripe + empty) return -1;
+                return 0;
+            })
+        );
+    }
+
     function generateTestCases() {
         testCases.length = 0;
 
-        // ── 1. 문제 예제 ──────────────────────────────────────
+        // ── A. 공식 예제 (3개) ────────────────────────────────
         addCase(6, 4, [
             [0,0,0,0,0,0],
             [0,0,0,0,0,0],
@@ -287,182 +302,250 @@
             [0,0,0,0,0,0],
             [0,0,0,0,0,1]
         ]);
-
-        // ── 2. 경계값: 최소 크기 ──────────────────────────────
-        addCase(2, 2, [[1,1],[1,1]]);          // 전부 익음 → 0
-        addCase(2, 2, [[0,0],[0,0]]);          // 익은 것 없음 → -1
-        addCase(2, 2, [[1,0],[0,0]]);          // 2x2 최소 전파
-        addCase(2, 2, [[-1,-1],[-1,-1]]);      // 전부 빈칸 → 0
-        addCase(2, 2, [[1,-1],[-1,0]]);        // 고립된 0 → -1
-        addCase(2, 2, [[-1,0],[0,1]]);         // 대각선 인접 불가 → 확인
-
-        // ── 3. 1행/1열 (직선) ─────────────────────────────────
-        // 1×N 직선: 왼쪽 끝에서 전파
-        addCase(10, 2, [
-            [1,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0]
-        ]);
-        // 1×N 직선: 중간에서 전파
-        addCase(10, 2, [
-            [0,0,0,0,1,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0]
-        ]);
-        // 직선인데 중간에 -1로 끊김
-        addCase(10, 2, [
-            [1,0,0,0,-1,0,0,0,0,0],
-            [0,0,0,0,-1,0,0,0,0,0]
+        addCase(6, 4, [
+            [1,-1,0,0,0,0],
+            [0,-1,0,0,0,0],
+            [0,0,0,0,-1,0],
+            [0,0,0,0,-1,1]
         ]);
 
-        // ── 4. 멀티소스 BFS ───────────────────────────────────
-        // 여러 곳에서 동시에 전파
+        // ── B. 경계값: 2×2 모든 조합 (8개) ──────────────────
+        addCase(2, 2, [[1,1],[1,1]]);           // 전부 익음 → 0
+        addCase(2, 2, [[0,0],[0,0]]);           // 익은 것 없음 → -1
+        addCase(2, 2, [[-1,-1],[-1,-1]]);       // 전부 빈칸 → 0
+        addCase(2, 2, [[1,0],[0,0]]);           // 하나에서 전파
+        addCase(2, 2, [[1,-1],[-1,0]]);         // 대각 고립 → -1
+        addCase(2, 2, [[-1,0],[0,1]]);          // 대각 고립 → -1
+        addCase(2, 2, [[1,0],[0,-1]]);          // L자 전파
+        addCase(2, 2, [[-1,1],[0,-1]]);         // 직선 전파
+
+        // ── C. 직선 / 비율 극단 (6개) ────────────────────────
+        // 1×N 형태 (M=N, N=2로 사실상 직선)
+        addCase(1000, 2, (() => {
+            const g = Array.from({length:2}, () => Array(1000).fill(0));
+            g[0][0] = 1;
+            return g;
+        })());
+        addCase(1000, 2, (() => {
+            const g = Array.from({length:2}, () => Array(1000).fill(0));
+            g[0][999] = 1;
+            return g;
+        })());
+        addCase(2, 1000, (() => {
+            const g = Array.from({length:1000}, () => Array(2).fill(0));
+            g[0][0] = 1;
+            return g;
+        })());
+        // 직선 중간에 -1로 끊김
+        addCase(20, 2, (() => {
+            const g = Array.from({length:2}, () => Array(20).fill(0));
+            g[0][0] = 1;
+            g[0][10] = -1; g[1][10] = -1;
+            return g;
+        })());
+        // 가로로 긴 직사각형
+        addCase(500, 2, (() => {
+            const g = Array.from({length:2}, () => Array(500).fill(0));
+            g[0][249] = 1;
+            return g;
+        })());
+        // 세로로 긴 직사각형
+        addCase(2, 500, (() => {
+            const g = Array.from({length:500}, () => Array(2).fill(0));
+            g[249][0] = 1;
+            return g;
+        })());
+
+        // ── D. 멀티소스 BFS (6개) ────────────────────────────
+        // 두 귀퉁이에서 동시 전파
+        {
+            const g = Array.from({length:20}, () => Array(20).fill(0));
+            g[0][0] = 1; g[19][19] = 1;
+            addCase(20, 20, g);
+        }
+        // 네 귀퉁이
+        {
+            const g = Array.from({length:20}, () => Array(20).fill(0));
+            g[0][0]=1; g[0][19]=1; g[19][0]=1; g[19][19]=1;
+            addCase(20, 20, g);
+        }
+        // 전체 테두리가 익음
         {
             const g = Array.from({length:10}, () => Array(10).fill(0));
-            g[0][0] = 1; g[9][9] = 1;
+            for(let i=0;i<10;i++){g[0][i]=1;g[9][i]=1;g[i][0]=1;g[i][9]=1;}
             addCase(10, 10, g);
         }
+        // 체커보드 패턴 (밀집 소스)
         {
             const g = Array.from({length:10}, () => Array(10).fill(0));
-            g[0][0] = 1; g[0][9] = 1; g[9][0] = 1; g[9][9] = 1; // 네 귀퉁이
+            for(let y=0;y<10;y++) for(let x=0;x<10;x++) if((x+y)%3===0) g[y][x]=1;
             addCase(10, 10, g);
         }
+        // 여러 소스 + 일부 -1
         {
-            const g = Array.from({length:10}, () => Array(10).fill(0));
-            // 체커보드처럼 익은 토마토 배치
-            for (let y = 0; y < 10; y++)
-                for (let x = 0; x < 10; x++)
-                    if ((x + y) % 4 === 0) g[y][x] = 1;
-            addCase(10, 10, g);
+            const g = Array.from({length:15}, () => Array(15).fill(0));
+            g[0][0]=1; g[7][7]=1; g[14][14]=1;
+            g[3][3]=-1; g[3][4]=-1; g[4][3]=-1;
+            addCase(15, 15, g);
+        }
+        // 소스가 딱 하나인데 중앙
+        {
+            const g = Array.from({length:21}, () => Array(21).fill(0));
+            g[10][10] = 1;
+            addCase(21, 21, g);
         }
 
-        // ── 5. 고립 케이스 (-1 장벽) ─────────────────────────
+        // ── E. 고립 / 장벽 패턴 (8개) ───────────────────────
         // 세로 벽으로 완전 분리
         {
             const g = Array.from({length:10}, () => Array(10).fill(0));
-            for (let y = 0; y < 10; y++) g[y][5] = -1;
-            g[0][0] = 1; // 오른쪽은 도달 불가
+            for(let y=0;y<10;y++) g[y][5]=-1;
+            g[0][0]=1;
             addCase(10, 10, g);
         }
         // 가로 벽으로 완전 분리
         {
             const g = Array.from({length:10}, () => Array(10).fill(0));
-            for (let x = 0; x < 10; x++) g[5][x] = -1;
-            g[0][0] = 1;
+            for(let x=0;x<10;x++) g[5][x]=-1;
+            g[0][0]=1;
             addCase(10, 10, g);
         }
-        // ㄷ자 모양 장벽: 안쪽은 도달 가능
+        // ㅁ자 벽 — 내부 도달 가능
         {
             const g = Array.from({length:10}, () => Array(10).fill(0));
-            for (let y = 2; y < 8; y++) { g[y][2] = -1; g[y][7] = -1; }
-            for (let x = 2; x <= 7; x++) g[2][x] = -1;
-            g[0][0] = 1;
+            for(let i=2;i<=7;i++){g[2][i]=-1;g[7][i]=-1;g[i][2]=-1;g[i][7]=-1;}
+            g[0][0]=1;
             addCase(10, 10, g);
         }
-        // 섬처럼 완전히 둘러싸인 0
+        // ㅁ자 벽 — 내부 익은 것 없음 (고립)
+        {
+            const g = Array.from({length:10}, () => Array(10).fill(-1));
+            // 외부만 0
+            for(let x=0;x<10;x++){g[0][x]=0;g[9][x]=0;}
+            for(let y=0;y<10;y++){g[y][0]=0;g[y][9]=0;}
+            g[0][0]=1;
+            addCase(10, 10, g);
+        }
+        // 미로처럼 구불구불한 통로
+        {
+            const m=11, n=5;
+            const g = Array.from({length:n}, () => Array(m).fill(-1));
+            // 뱀 모양 통로
+            for(let x=0;x<m;x++) g[0][x]=0;
+            g[0][0]=1;
+            for(let y=0;y<n;y++) g[y][m-1]=0;
+            for(let x=0;x<m;x++) g[n-1][x]=0;
+            for(let y=0;y<n;y++) g[y][0]=0;
+            addCase(m, n, g);
+        }
+        // 체스판 -1 패턴 (모든 0이 고립)
         {
             const g = Array.from({length:5}, () => Array(5).fill(0));
-            g[0][0]=1; g[0][1]=-1; g[1][0]=-1;
-            // (1,1)~(4,4) 영역은 고립
+            for(let y=0;y<5;y++) for(let x=0;x<5;x++) if((x+y)%2===0) g[y][x]=-1;
+            g[1][0]=1;
             addCase(5, 5, g);
         }
-
-        // ── 6. 전체가 -1 + 일부만 0 ──────────────────────────
+        // 좁은 병목 통로
         {
-            const g = Array.from({length:5}, () => Array(5).fill(-1));
-            g[2][2] = 0; // 0만 있고 1 없음 → -1
-            addCase(5, 5, g);
+            const g = Array.from({length:10}, () => Array(20).fill(-1));
+            for(let y=0;y<10;y++) for(let x=0;x<9;x++) g[y][x]=0;
+            for(let y=0;y<10;y++) for(let x=11;x<20;x++) g[y][x]=0;
+            g[5][9]=0; // 병목
+            g[0][0]=1;
+            addCase(20, 10, g);
         }
+        // 익은 토마토가 벽 안쪽에 있는 진짜 고립 소스
         {
-            const g = Array.from({length:5}, () => Array(5).fill(-1));
-            g[2][2] = 1; // 1만 있고 0 없음 → 0
-            addCase(5, 5, g);
+            const g = Array.from({length:7}, () => Array(7).fill(0));
+            // 테두리 -1
+            for(let i=0;i<7;i++){g[0][i]=-1;g[6][i]=-1;g[i][0]=-1;g[i][6]=-1;}
+            g[3][3]=1; // 내부에만 소스
+            addCase(7, 7, g);
         }
 
-        // ── 7. 뱀처럼 구불구불한 경로 ────────────────────────
-        // 좁은 통로를 통해 전파: 최장 경로 유도
+        // ── F. 극단 단순 케이스 (5개) ────────────────────────
+        // 전부 1 (중간 크기)
+        addCase(100, 100, Array.from({length:100}, () => Array(100).fill(1)));
+        // 전부 0 (중간 크기) → -1
+        addCase(100, 100, Array.from({length:100}, () => Array(100).fill(0)));
+        // 전부 -1 (중간 크기) → 0
+        addCase(100, 100, Array.from({length:100}, () => Array(100).fill(-1)));
+        // 0 딱 하나 + 나머지 -1, 소스 없음 → -1
         {
-            const M2 = 10, N2 = 5;
-            const g = Array.from({length:N2}, () => Array(M2).fill(-1));
-            // 지그재그 통로 만들기
-            for (let x = 0; x < M2; x++) g[0][x] = 0;
-            for (let y = 0; y < N2; y++) g[y][M2-1] = 0;
-            for (let x = 0; x < M2; x++) g[N2-1][x] = 0;
-            for (let y = 0; y < N2; y++) g[y][0] = 0;
-            g[0][0] = 1;
-            addCase(M2, N2, g);
+            const g = Array.from({length:10}, () => Array(10).fill(-1));
+            g[5][5]=0;
+            addCase(10, 10, g);
+        }
+        // 1 딱 하나 + 나머지 -1 → 0
+        {
+            const g = Array.from({length:10}, () => Array(10).fill(-1));
+            g[5][5]=1;
+            addCase(10, 10, g);
         }
 
-        // ── 8. 중간 크기 랜덤 케이스 (시드 고정) ─────────────
-        function seededRand(seed) {
-            let s = seed;
-            return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
-        }
-
-        const randomConfigs = [
-            { m: 50,  n: 50,  seed: 42,   density: 0.1  },
-            { m: 50,  n: 50,  seed: 123,  density: 0.3  },
-            { m: 100, n: 100, seed: 777,  density: 0.05 },
-            { m: 100, n: 100, seed: 999,  density: 0.2  },
-            { m: 200, n: 200, seed: 2024, density: 0.1  },
-            { m: 300, n: 300, seed: 3141, density: 0.05 },
-            { m: 500, n: 500, seed: 5000, density: 0.02 },
+        // ── G. 시드 고정 랜덤 (15개) ─────────────────────────
+        const randConfigs = [
+            // [m,    n,    seed,  ripe,  empty]
+            [10,   10,   1,     0.1,   0.1  ],
+            [10,   10,   2,     0.0,   0.3  ], // 소스 없을 수도 있음 → -1 가능
+            [20,   20,   3,     0.05,  0.2  ],
+            [20,   20,   4,     0.15,  0.0  ],
+            [30,   30,   5,     0.1,   0.1  ],
+            [50,   50,   6,     0.05,  0.15 ],
+            [50,   50,   7,     0.2,   0.05 ],
+            [100,  100,  8,     0.03,  0.1  ],
+            [100,  100,  9,     0.1,   0.1  ],
+            [150,  150,  10,    0.05,  0.05 ],
+            [200,  200,  11,    0.02,  0.2  ],
+            [300,  300,  12,    0.03,  0.1  ],
+            [400,  400,  13,    0.01,  0.05 ],
+            [500,  500,  14,    0.02,  0.1  ],
+            [700,  700,  15,    0.01,  0.05 ],
         ];
-
-        for (const { m, n, seed, density } of randomConfigs) {
-            const rand = seededRand(seed);
-            const g = Array.from({length: n}, () =>
-                Array.from({length: m}, () => {
-                    const r = rand();
-                    if (r < density) return 1;
-                    if (r < density + 0.05) return -1;
-                    return 0;
-                })
-            );
-            addCase(m, n, g);
+        for (const [m, n, seed, ripe, empty] of randConfigs) {
+            addCase(m, n, randomGrid(m, n, seed, ripe, empty));
         }
 
-        // ── 9. 대형 케이스: 최장 거리 ────────────────────────
-        // 1000×1000, 우하단에서 좌상단까지 전파
+        // ── H. 최대 크기 스트레스 (9개) ──────────────────────
+        // 좌상단 소스 → 최장 전파
         {
-            const m = 1000, n = 1000;
-            const g = Array.from({length: n}, () => Array(m).fill(0));
-            g[n-1][m-1] = 1;
-            addCase(m, n, g);
+            const g = Array.from({length:1000}, () => Array(1000).fill(0));
+            g[0][0]=1;
+            addCase(1000, 1000, g);
         }
-        // 1000×1000, 정중앙에서 전파
+        // 우하단 소스
         {
-            const m = 1000, n = 1000;
-            const g = Array.from({length: n}, () => Array(m).fill(0));
-            g[500][500] = 1;
-            addCase(m, n, g);
+            const g = Array.from({length:1000}, () => Array(1000).fill(0));
+            g[999][999]=1;
+            addCase(1000, 1000, g);
         }
-
-        // ── 10. 대형 케이스: 진짜 고립 ───────────────────────
-        // 세로 벽으로 완전 분리 (1000×1000)
+        // 정중앙 소스
         {
-            const m = 1000, n = 1000;
-            const g = Array.from({length: n}, () => Array(m).fill(0));
-            for (let y = 0; y < n; y++) g[y][500] = -1;
-            g[0][0] = 1; // 오른쪽 500칸은 영원히 못 익음
-            addCase(m, n, g);
+            const g = Array.from({length:1000}, () => Array(1000).fill(0));
+            g[500][500]=1;
+            addCase(1000, 1000, g);
         }
-        // 전부 0, 익은 것 없음
+        // 전부 1 → 0
+        addCase(1000, 1000, Array.from({length:1000}, () => Array(1000).fill(1)));
+        // 전부 0 → -1
+        addCase(1000, 1000, Array.from({length:1000}, () => Array(1000).fill(0)));
+        // 전부 -1 → 0
+        addCase(1000, 1000, Array.from({length:1000}, () => Array(1000).fill(-1)));
+        // 세로 벽으로 완전 분리 (진짜 -1)
         {
-            const m = 1000, n = 1000;
-            const g = Array.from({length: n}, () => Array(m).fill(0));
-            addCase(m, n, g);
+            const g = Array.from({length:1000}, () => Array(1000).fill(0));
+            for(let y=0;y<1000;y++) g[y][500]=-1;
+            g[0][0]=1;
+            addCase(1000, 1000, g);
         }
-        // 전부 1
+        // 네 귀퉁이 소스 → 빠른 전파
         {
-            const m = 1000, n = 1000;
-            const g = Array.from({length: n}, () => Array(m).fill(1));
-            addCase(m, n, g);
+            const g = Array.from({length:1000}, () => Array(1000).fill(0));
+            g[0][0]=1; g[0][999]=1; g[999][0]=1; g[999][999]=1;
+            addCase(1000, 1000, g);
         }
-        // 전부 -1
-        {
-            const m = 1000, n = 1000;
-            const g = Array.from({length: n}, () => Array(m).fill(-1));
-            addCase(m, n, g);
-        }
+        // 랜덤 대형
+        addCase(1000, 1000, randomGrid(1000, 1000, 9999, 0.01, 0.1));
 
         document.getElementById('tcCountUI').innerText = `총 ${testCases.length}개`;
         console.log(`테스트케이스 ${testCases.length}개 생성 완료`);
@@ -555,21 +638,24 @@ except Exception:
         btn.disabled = true;
 
         for (let i = 0; i < testCases.length; i++) {
-            resBox.innerText = `채점 중 (${Math.floor((i / testCases.length) * 100)}%)`;
+            resBox.innerText = `채점 중 (${Math.floor((i / testCases.length) * 100)}%) — ${i+1}/${testCases.length}`;
             const res = await runTestInWorker(userCode, testCases[i].in);
 
             if (res.error || res.err) {
                 resBox.innerText = "런타임 에러";
                 resBox.className = "result-display res-fail";
                 errLog.style.display = 'block';
-                errLog.innerText = res.error || res.err;
+                errLog.innerText = `케이스 ${i+1} 런타임 에러\n\n${res.error || res.err}`;
                 btn.disabled = false; return;
             }
             if (res.out !== testCases[i].out) {
                 resBox.innerText = "틀렸습니다";
                 resBox.className = "result-display res-fail";
                 errLog.style.display = 'block';
-                errLog.innerText = `케이스 ${i+1} 실패\n기댓값: ${testCases[i].out}\n실제값: ${res.out}\n\n입력:\n${testCases[i].in}`;
+                const preview = testCases[i].in.length > 300
+                    ? testCases[i].in.slice(0, 300) + '\n...(생략)'
+                    : testCases[i].in;
+                errLog.innerText = `케이스 ${i+1} 실패\n기댓값: ${testCases[i].out}\n실제값: ${res.out}\n\n입력 미리보기:\n${preview}`;
                 btn.disabled = false; return;
             }
         }
