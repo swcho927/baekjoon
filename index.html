@@ -2,198 +2,156 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>그뭐냐 Judge</title>
-
-    <!-- 구글 폰트: 코딩 느낌의 JetBrains Mono + 한글용 Noto Sans KR -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
-
-    <!-- 스타일시트 -->
     <link rel="stylesheet" href="style.css">
 
     <!--
-        ★★★ 핵심: Skulpt 로드 (Pyodide 대체)
-        ────────────────────────────────────────
-        Pyodide를 버린 이유:
-          - 30MB 이상 다운로드 필요 → 로딩 매우 느림
-          - Web Worker 내부에서 CDN 재로드 → 환경에 따라 막힘
-
-        Skulpt를 쓰는 이유:
-          - 파일 2개, 수백KB → 즉시 로드
-          - <script> 태그로 로드하면 Sk 전역 객체 바로 사용 가능
-          - 나중에 친구분 JS 컴파일러로 교체 시 judge.js의
-            runCode() 함수 안만 수정하면 됩니다.
-
-        skulpt.min.js     → Skulpt 핵심 엔진
-        skulpt-stdlib.js  → Python 표준 라이브러리 (sys, io 등)
+        공통 전역 변수 및 유틸 함수를 가장 먼저 선언.
+        problems/*.js 가 로드될 때 이미 존재해야 하므로 <head> 에 배치.
     -->
-    <script src="https://skulpt.org/js/skulpt.min.js"></script>
-    <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
-
-    <!-- Monaco 에디터 로더 (VS Code와 동일한 코드 에디터) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
-
-    <!-- 문제 데이터: problems 폴더에서 관리 -->
-    <!-- 새 문제 추가 시 여기에 <script src="problems/번호.js"> 추가 -->
-    <script src="problems/1000.js"></script>
+    <script>
+        // 전체 문제 목록을 담는 전역 레지스트리
+        window.PROBLEMS = {};
+    </script>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════
-     네비게이션 바
-     ════════════════════════════════════════════════════ -->
-<nav class="navbar">
-    <a class="navbar-brand" href="#">그뭐냐 JUDGE</a>
-    <span class="navbar-sub">/ 1000번</span>
+<!-- ── 상단 바 ── -->
+<div class="topbar">
+    <span class="topbar-brand">그뭐냐 <span>Judge</span></span>
+    <div class="topbar-divider"></div>
+    <span class="topbar-sub">그 뭐냐 언어 전용 채점 사이트</span>
+</div>
 
-    <!-- 엔진 로딩 상태: 로딩중(깜박)→준비완료(초록)→에러(빨강) -->
-    <div class="engine-status">
-        <div class="status-dot" id="status-dot"></div>
-        <span id="status-text">엔진 초기화 중...</span>
-    </div>
-</nav>
+<div class="layout">
 
+    <!-- ── 왼쪽 사이드바: 문제 목록 ── -->
+    <nav class="sidebar">
+        <div class="sidebar-label">문제 목록</div>
 
-<!-- ════════════════════════════════════════════════════
-     메인 컨텐츠
-     ════════════════════════════════════════════════════ -->
-<div class="main">
+        <!-- 문제가 추가될 때마다 여기에 항목을 추가 -->
+        <a class="sidebar-item active" id="tab-aplusb" onclick="switchProblem('aplusb')">
+            <span class="sidebar-num">1000</span>
+            <span class="sidebar-title">A+B</span>
+        </a>
+    </nav>
 
-    <!-- 문제 번호 + 제목 -->
-    <div class="problem-header">
-        <div class="problem-num" id="prob-num">PROBLEM #1000</div>
-        <div class="problem-title" id="prob-title">A+B</div>
-    </div>
+    <!-- ── 오른쪽 메인 영역 ── -->
+    <div class="main-content">
 
-    <!-- 시간/메모리 제한 정보 -->
-    <div class="info-table">
-        <div class="info-cell">
-            <div class="label">시간 제한</div>
-            <div class="value" id="info-time">—</div>
-        </div>
-        <div class="info-cell">
-            <div class="label">메모리 제한</div>
-            <div class="value" id="info-mem">—</div>
-        </div>
-        <div class="info-cell">
-            <div class="label">테스트케이스</div>
-            <div class="value" id="info-tc">—</div>
-        </div>
-    </div>
+        <!-- ══ 1000번: A+B ══ -->
+        <div class="prob-page active" id="page-aplusb">
+        <div class="container">
 
-    <!-- 문제 설명 -->
-    <div class="section-title">문제</div>
-    <div class="content-box" id="prob-desc">로딩 중...</div>
-
-    <!-- 입력 형식 -->
-    <div class="section-title">입력</div>
-    <div class="content-box" id="prob-input">로딩 중...</div>
-
-    <!-- 출력 형식 -->
-    <div class="section-title">출력</div>
-    <div class="content-box" id="prob-output">로딩 중...</div>
-
-    <!-- 예제 테스트케이스 (JS에서 동적으로 생성) -->
-    <div class="section-title">예제</div>
-    <div id="examples-container"></div>
-
-
-    <!-- ════════════════════════════════════════════════
-         제출 섹션
-         ════════════════════════════════════════════════ -->
-    <div class="submit-section">
-        <div class="submit-title">// 코드 제출</div>
-
-        <!-- Monaco 에디터가 이 div 안에 생성됩니다 -->
-        <div id="editor-container"></div>
-
-        <!--
-            제출 버튼
-            - 처음엔 disabled (엔진 로딩 완료 전)
-            - 엔진 준비 완료 시 judge.js의 initEngine()이 활성화
-        -->
-        <button id="submit-btn" onclick="startJudge()" disabled>
-            엔진 초기화 중...
-        </button>
-
-        <!-- ── 채점 진행 영역 (채점 시작 전엔 숨김) ── -->
-        <div id="progress-section">
-            <!-- 진행 상태 텍스트 + 퍼센트 -->
-            <div class="progress-label">
-                <span id="progress-text">채점 준비 중...</span>
-                <span id="progress-pct">0%</span>
+            <div class="problem-header">
+                <div class="problem-number">1000번</div>
+                <h1 class="problem-title">A+B</h1>
             </div>
-            <!-- 진행 바 -->
-            <div class="progress-bar-wrap">
-                <div id="progress-bar"></div>
+
+            <!-- 문제 정보 테이블 -->
+            <table class="info-table">
+                <thead>
+                    <tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2 초</td>
+                        <td>256 MB</td>
+                        <!-- generateTC() 가 실행되면 이 텍스트가 바뀜 -->
+                        <td id="tcCountAplusb">생성 중...</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="section-title">문제</div>
+            <div class="content-box">
+                두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.
             </div>
-            <!-- 테스트케이스별 결과 목록 (JS에서 동적 생성) -->
-            <div id="tc-results"></div>
+
+            <div class="section-title">입력</div>
+            <div class="content-box">
+                첫째 줄에 A와 B가 주어진다. (1 ≤ A, B ≤ 9)
+            </div>
+
+            <div class="section-title">출력</div>
+            <div class="content-box">
+                첫째 줄에 A+B를 출력한다.
+            </div>
+
+            <div class="section-title">예제</div>
+            <div class="examples-grid">
+                <div class="example-block">
+                    <div class="example-header">입력 1</div>
+                    <div class="example-content">1
+2</div>
+                </div>
+                <div class="example-block">
+                    <div class="example-header">출력 1</div>
+                    <div class="example-content">3</div>
+                </div>
+            </div>
+
+            <!-- ── 코드 제출 영역 ── -->
+            <div class="submit-section">
+                <div class="submit-header">
+                    <span class="submit-title">코드 제출</span>
+                    <span class="submit-lang">그 뭐냐 언어</span>
+                </div>
+
+                <!-- 코드 입력 textarea -->
+                <textarea
+                    id="editor-aplusb"
+                    class="code-editor"
+                    placeholder="여기에 그 뭐냐 코드를 작성하세요..."
+                    spellcheck="false"
+                ></textarea>
+
+                <button
+                    id="sBtn-aplusb"
+                    class="btn-submit"
+                    onclick="submitCode('aplusb')"
+                >제출 및 채점 시작</button>
+
+                <!-- 채점 진행 영역 -->
+                <div class="judge-area">
+
+                    <!-- 프로그레스 바 (채점 중에만 표시) -->
+                    <div class="progress-wrap" id="progressWrap-aplusb">
+                        <div class="progress-info">
+                            <span>채점 중&nbsp;
+                                <!-- "3 / 10" 형태로 현재 케이스 번호 표시 -->
+                                <span id="progressNum-aplusb">0 / 0</span>
+                            </span>
+                            <!-- "30%" 형태로 퍼센트 표시 -->
+                            <span id="progressText-aplusb">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progressFill-aplusb"></div>
+                        </div>
+                    </div>
+
+                    <!-- 최종 채점 결과 (맞았습니다 / 틀렸습니다 / 에러) -->
+                    <div id="resultBox-aplusb" class="result-display"></div>
+
+                    <!-- 오답일 때 어떤 케이스에서 틀렸는지 상세 정보 -->
+                    <div id="errorLog-aplusb" class="error-log"></div>
+
+                </div>
+            </div>
         </div>
+        </div>
+        <!-- 문제 페이지 추가 시 여기 아래에 계속 추가 -->
 
-        <!-- 최종 결과 (맞았습니다!! / 틀렸습니다) -->
-        <div class="final-result" id="final-result"></div>
+    </div><!-- /main-content -->
+</div><!-- /layout -->
 
-        <!-- 에러/오답 상세 로그 -->
-        <div id="error-log"></div>
-    </div>
-
-</div><!-- /.main -->
-
-
-<!-- ════════════════════════════════════════════════════
-     채점 로직 로드
-     ════════════════════════════════════════════════════ -->
+<!--
+    로드 순서가 매우 중요:
+    1. problems/*.js  → 문제별 TC와 solver 를 PROBLEMS 에 등록
+    2. judge.js       → PROBLEMS 를 읽어 채점 엔진 초기화
+-->
+<script src="problems/aplusb.js"></script>
 <script src="judge.js"></script>
-
-<script>
-    // ── 페이지 로드 완료 시 초기화 ──────────────────────
-    // DOMContentLoaded: HTML 파싱 완료 후 실행
-    document.addEventListener('DOMContentLoaded', function () {
-
-        // 1. problems/1000.js에서 정의된 PROBLEM_1000 데이터로 UI 채우기
-        loadProblemUI(PROBLEM_1000);
-
-        // 2. Monaco 에디터 + Skulpt 엔진 초기화 (judge.js의 함수)
-        initEditor(PROBLEM_1000.starterCode);
-    });
-
-
-    // 문제 데이터를 받아서 화면에 표시하는 함수
-    function loadProblemUI(prob) {
-        // 제목/번호
-        document.getElementById('prob-num').textContent   = 'PROBLEM #' + prob.id;
-        document.getElementById('prob-title').textContent = prob.title;
-
-        // 제한 정보
-        document.getElementById('info-time').textContent = prob.timeLimit + '초';
-        document.getElementById('info-mem').textContent  = prob.memoryLimit + 'MB';
-        document.getElementById('info-tc').textContent   = prob.testCases.length + '개';
-
-        // 문제 본문 (innerHTML: HTML 태그 허용)
-        document.getElementById('prob-desc').innerHTML   = prob.description;
-        document.getElementById('prob-input').innerHTML  = prob.inputDesc;
-        document.getElementById('prob-output').innerHTML = prob.outputDesc;
-
-        // 예제 테스트케이스 동적 생성
-        const container = document.getElementById('examples-container');
-        prob.examples.forEach(function (ex, idx) {
-            var grid = document.createElement('div');
-            grid.className = 'tc-grid';
-            grid.style.marginBottom = '12px';
-            grid.innerHTML =
-                '<div class="tc-box">' +
-                    '<div class="tc-box-header">예제 입력 ' + (idx + 1) + '</div>' +
-                    '<div class="tc-box-content">' + ex.input + '</div>' +
-                '</div>' +
-                '<div class="tc-box">' +
-                    '<div class="tc-box-header">예제 출력 ' + (idx + 1) + '</div>' +
-                    '<div class="tc-box-content">' + ex.output + '</div>' +
-                '</div>';
-            container.appendChild(grid);
-        });
-    }
-</script>
 
 </body>
 </html>
