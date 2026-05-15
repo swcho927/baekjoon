@@ -1,14 +1,18 @@
 // ════════════════════════════════════════════════════════
-//  judge.js  ─  채점 엔진 + UI 로직
-//
-//  ★ 나중에 친구분 JS 컴파일러로 교체할 때:
-//    runCode() 함수 안의 Skulpt 부분만 바꾸면 됩니다.
+//  judge.js  ─  '그 뭐냐' 언어 전용 채점 엔진 + UI 로직
 // ════════════════════════════════════════════════════════
 
-var monacoEditor = null;  // Monaco 에디터 인스턴스
-var engineReady  = false; // 엔진 준비 완료 여부
-var isJudging    = false; // 채점 진행 중 여부
+var monacoEditor = null;
+var engineReady  = false;
+var isJudging    = false;
 
+// 임시 테스트 케이스 (실제 환경에 맞게 PROBLEM_1000 등으로 교체 가능)
+var PROBLEM_1000 = {
+    testCases: [
+        { in: "1 2", out: "3" },
+        { in: "10 20", out: "30" }
+    ]
+};
 
 // ════════════════════════════════════════════════════════
 //  1. Monaco 에디터 초기화
@@ -22,8 +26,8 @@ function initEditor(starterCode) {
         monacoEditor = monaco.editor.create(
             document.getElementById("editor-container"),
             {
-                value: starterCode,
-                language: "python",
+                value: starterCode || "// '그 뭐냐' 코드를 작성하세요\n",
+                language: "javascript", // 하이라이팅용
                 theme: "vs-dark",
                 automaticLayout: true,
                 fontSize: 15,
@@ -31,99 +35,101 @@ function initEditor(starterCode) {
                 scrollBeyondLastLine: false,
             }
         );
-        // Monaco 로드 완료 후 Skulpt 엔진 확인
+        // 에디터 로드 후 내장 JS 엔진이므로 즉시 준비 완료 처리
         initEngine();
     });
 }
 
-
 // ════════════════════════════════════════════════════════
-//  2. Skulpt 엔진 확인
-//     <script> 태그로 이미 로드했으므로 Sk 객체 존재 여부만 확인
+//  2. 엔진 초기화 (JS 내장형)
 // ════════════════════════════════════════════════════════
 function initEngine() {
-    if (typeof Sk !== "undefined") {
-        // Skulpt 로드 성공
-        engineReady = true;
-        setStatus("ready", "엔진 준비 완료");
-        var btn = document.getElementById("submit-btn");
+    engineReady = true;
+    setStatus("ready", "그 뭐냐 엔진 준비 완료");
+    var btn = document.getElementById("submit-btn");
+    if (btn) {
         btn.disabled = false;
         btn.textContent = "제출 및 채점";
-    } else {
-        // Skulpt 로드 실패
-        setStatus("error", "엔진 로드 실패 — 새로고침 해주세요");
     }
 }
 
-
 // ════════════════════════════════════════════════════════
-//  3. Python 코드 실행
-//
-//  ★ 나중에 JS 컴파일러로 교체할 때 이 함수만 수정
-//
-//  @param code  {string} 사용자 코드
-//  @param input {string} stdin 입력값
-//  @returns Promise<{ output: string, error: string }>
+//  3. 🔥 '그 뭐냐' 언어 채점용 실행 엔진 🔥
+//     입력창 띄우지 않고 tc.in 값을 자동으로 빨아들입니다.
 // ════════════════════════════════════════════════════════
 async function runCode(code, input) {
-    if (!isDebugMode) toggleMode();
-    document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
-    let linesArr = editor.value.split('\n');
-    if (pc < 0 || pc >= linesArr.length) { log("\n>>> 프로그램 종료."); return false; }
+    let linesArr = code.split('\n');
+    let pc = 0;
     
-    const lineEl = document.getElementById(`line-${pc}`);
-    if (lineEl) { lineEl.classList.add('active'); lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    // 채점을 위한 독립적인 메모리와 환경 세팅
+    let tempMemory = {}; 
+    let outputBuffer = ""; 
     
-    let fullLine = linesArr[pc].split('#')[0].trim();
-    let jumped = false;
-    
-    if (fullLine) {
-        try {
-            if (fullLine.includes("뭐더라")) { 
-                let [m, e] = fullLine.split("뭐더라"); 
-                let targetAddr = resolveAddr(m.trim());
-                memory[targetAddr] = getVal(e.trim()); 
-            }
-            else if (fullLine.includes("진짜뭐지")) { 
-                // 문자 1개를 입력받아 ASCII/유니코드 저장
-                let m = fullLine.replace("진짜뭐지", "").trim(); 
-                let targetAddr = resolveAddr(m);
-                let val = await requestConsoleInput(`[${targetAddr}번] 문자 입력:`);
-                if (val === null) return false; // 입력 취소(강제중지) 시 스텝 종료
-                memory[targetAddr] = (val && val.length > 0) ? val.charCodeAt(0) : 0; 
-            }
-            else if (fullLine.includes("진짜뭐냐")) { 
-                // 값을 문자로 변환하여 줄바꿈 없이 출력
-                printOut(String.fromCharCode(getVal(fullLine.replace("진짜뭐냐", "")))); 
-            }
-            else if (fullLine.includes("뭐지")) { 
-                let m = fullLine.replace("뭐지", "").trim(); 
-                let targetAddr = resolveAddr(m);
-                let val = await requestConsoleInput(`[${targetAddr}번] 숫자 입력:`);
-                if (val === null) return false; // 💡 입력 취소(강제중지) 시 스텝 종료
-                memory[targetAddr] = parseInt(val) || 0; 
-            }
-            else if (fullLine.includes("뭐냐")) { 
-                // 값을 줄바꿈 없이 출력
-                printOut(getVal(fullLine.replace("뭐냐", ""))); 
-            }
-            else if (fullLine.includes("있잖아")) { 
-                let offset = getVal(fullLine.replace("있잖아", "")); 
-                pc += offset; jumped = true; 
-            }
-        } catch (err) { log(`\nError: ${err}`, "#ff5555"); }
-    }
-    
-    if (!jumped) pc++;
-    updateMemoryView();
-    updateHighlight();
-    return true;
-}
+    // 입력값을 공백이나 줄바꿈 기준으로 쪼개어 큐(Queue)처럼 준비해둡니다.
+    let inputTokens = input.trim().split(/\s+/);
+    let inputCursor = 0;
 
+    // 무한 루프 방지 (서버/브라우저가 뻗는 걸 막기 위해)
+    let steps = 0;
+    const MAX_STEPS = 100000;
+
+    try {
+        while (pc >= 0 && pc < linesArr.length) {
+            if (steps++ > MAX_STEPS) {
+                throw new Error("Time Limit Exceeded (무한루프 의심)");
+            }
+
+            let fullLine = linesArr[pc].split('#')[0].trim();
+            let jumped = false;
+
+            if (fullLine) {
+                if (fullLine.includes("뭐더라")) { 
+                    let [m, e] = fullLine.split("뭐더라"); 
+                    let targetAddr = resolveAddr(m.trim());
+                    tempMemory[targetAddr] = getVal(e.trim(), tempMemory); 
+                }
+                else if (fullLine.includes("진짜뭐지")) { 
+                    // [변경] 입력창 대신 테스트케이스(inputTokens)에서 문자를 꺼내옵니다.
+                    let m = fullLine.replace("진짜뭐지", "").trim(); 
+                    let targetAddr = resolveAddr(m);
+                    let val = inputTokens[inputCursor++] || "";
+                    tempMemory[targetAddr] = (val && val.length > 0) ? val.charCodeAt(0) : 0; 
+                }
+                else if (fullLine.includes("진짜뭐냐")) { 
+                    // [변경] 화면 출력이 아닌 outputBuffer에 누적합니다.
+                    let val = getVal(fullLine.replace("진짜뭐냐", ""), tempMemory);
+                    outputBuffer += String.fromCharCode(val); 
+                }
+                else if (fullLine.includes("뭐지")) { 
+                    // [변경] 입력창 대신 테스트케이스(inputTokens)에서 숫자를 꺼내옵니다.
+                    let m = fullLine.replace("뭐지", "").trim(); 
+                    let targetAddr = resolveAddr(m);
+                    let val = inputTokens[inputCursor++] || "0";
+                    tempMemory[targetAddr] = parseInt(val) || 0; 
+                }
+                else if (fullLine.includes("뭐냐")) { 
+                    // [변경] 화면 출력이 아닌 outputBuffer에 누적합니다.
+                    let val = getVal(fullLine.replace("뭐냐", ""), tempMemory);
+                    outputBuffer += val.toString(); 
+                }
+                else if (fullLine.includes("있잖아")) { 
+                    let offset = getVal(fullLine.replace("있잖아", ""), tempMemory); 
+                    pc += offset; jumped = true; 
+                }
+            }
+            
+            if (!jumped) pc++;
+        }
+    } catch (err) {
+        return { output: outputBuffer, error: err.message };
+    }
+
+    // 채점기가 비교할 수 있게 최종 출력 문자열 반환
+    return { output: outputBuffer, error: null };
+}
 
 // ════════════════════════════════════════════════════════
 //  4. 채점 시작
-//     테스트케이스를 순서대로 실행하며 UI 업데이트
 // ════════════════════════════════════════════════════════
 async function startJudge() {
     if (!engineReady || isJudging) return;
@@ -133,7 +139,6 @@ async function startJudge() {
     var tcs   = PROBLEM_1000.testCases;
     var total = tcs.length;
 
-    // DOM 요소 참조
     var btn         = document.getElementById("submit-btn");
     var progressSec = document.getElementById("progress-section");
     var progressBar = document.getElementById("progress-bar");
@@ -143,7 +148,6 @@ async function startJudge() {
     var finalResult = document.getElementById("final-result");
     var errorLog    = document.getElementById("error-log");
 
-    // ── UI 초기화 ──
     btn.disabled = true;
     btn.textContent = "채점 중...";
     progressSec.style.display = "block";
@@ -157,7 +161,6 @@ async function startJudge() {
     finalResult.className   = "final-result";
     errorLog.style.display  = "none";
 
-    // 테스트케이스 행 미리 생성 (PENDING 상태)
     for (var i = 0; i < total; i++) {
         var row = document.createElement("div");
         row.className = "tc-result-row";
@@ -167,7 +170,6 @@ async function startJudge() {
         tcResults.appendChild(row);
     }
 
-    // ── 테스트케이스 순서대로 실행 ──
     var allPassed      = true;
     var firstFailInfo  = "";
 
@@ -175,29 +177,23 @@ async function startJudge() {
         var tc    = tcs[i];
         var badge = document.getElementById("badge-" + i);
 
-        // 현재 케이스 실행 중 표시
         badge.className   = "tc-badge badge-running";
         badge.textContent = "실행 중";
         progressTxt.textContent = "테스트 " + (i + 1) + " / " + total;
 
-        // 코드 실행
+        // 엔진 실행 대기
         var result = await runCode(code, tc.in);
 
-        // 진행률 업데이트
         var pct = Math.round(((i + 1) / total) * 100);
         progressBar.style.width = pct + "%";
         progressPct.textContent = pct + "%";
 
         if (result.error) {
-            // 에러
             badge.className   = "tc-badge badge-error";
             badge.textContent = "에러";
             allPassed = false;
-            if (!firstFailInfo) {
-                firstFailInfo = "[테스트 " + (i+1) + "] 런타임 에러\n" + result.error;
-            }
+            if (!firstFailInfo) firstFailInfo = "[테스트 " + (i+1) + "] 런타임 에러\n" + result.error;
         } else if (result.output.trim() !== tc.out.trim()) {
-            // 오답
             badge.className   = "tc-badge badge-fail";
             badge.textContent = "틀림";
             allPassed = false;
@@ -209,16 +205,13 @@ async function startJudge() {
                     "내 출력: " + result.output;
             }
         } else {
-            // 정답
             badge.className   = "tc-badge badge-pass";
             badge.textContent = "정답";
         }
 
-        // 채점 과정이 눈에 보이도록 약간 대기
-        await sleep(120);
+        await sleep(100);
     }
 
-    // ── 최종 결과 표시 ──
     if (allPassed) {
         progressBar.style.background = "var(--green)";
         progressPct.className        = "done-success";
@@ -242,18 +235,27 @@ async function startJudge() {
     isJudging       = false;
 }
 
-
 // ════════════════════════════════════════════════════════
 //  5. 유틸 함수
 // ════════════════════════════════════════════════════════
-
-// 네비바 상태 표시 업데이트
 function setStatus(state, text) {
-    document.getElementById("status-dot").className  = "status-dot " + state;
-    document.getElementById("status-text").textContent = text;
+    var dot = document.getElementById("status-dot");
+    var txt = document.getElementById("status-text");
+    if(dot) dot.className = "status-dot " + state;
+    if(txt) txt.textContent = text;
 }
 
-// ms 밀리초 대기
 function sleep(ms) {
     return new Promise(function (r) { setTimeout(r, ms); });
+}
+
+// ⚠️ [중요] 디렉터님의 원래 코드에 있던 resolveAddr, getVal 함수가 
+// judge.js 어딘가에 존재해야 합니다. 만약 없다면 아래처럼 더미 함수를 실제에 맞게 채워주세요.
+function resolveAddr(str) {
+    // 예: 'A' -> 0, 'B' -> 1 
+    return str; 
+}
+function getVal(str, memoryObj) {
+    // 예: 변수면 memoryObj에서 꺼내고, 숫자면 parseInt
+    return parseInt(str) || memoryObj[str] || 0;
 }
