@@ -18,13 +18,10 @@
 //     원본 컴파일러에서 DOM 의존성 제거, 순수 실행 엔진
 // ════════════════════════════════════════════════════════
 
-// 메모리와 프로그램 카운터 (전역 - runCode 실행마다 초기화)
 var memory = {};
 var pc = 0;
 
 // ── 주소 해결기 ──
-// "그" 개수 = 주소 번호, "거" 있으면 포인터 역참조
-// 예: "그" → 1번, "그그" → 2번, "그거" → memory[1]번 주소
 function resolveAddr(memStr) {
     let geuCount = (memStr.match(/그/g) || []).length;
     let geoCount = (memStr.match(/거/g) || []).length;
@@ -36,8 +33,6 @@ function resolveAddr(memStr) {
 }
 
 // ── 토크나이저 ──
-// 한 줄을 명령어/메모리/숫자/연산자 토큰으로 분해
-// getVal()이 내부적으로 사용
 function tokenizeLine(text) {
     const regex = /(#.*)|(그+거+)|(그+)|(진짜뭐지|진짜뭐냐|뭐더라|뭐지|뭐냐|있잖아)|(아|어)|(\.\.\.|\.\.|\.|,,|,|;;|;|~)/g;
     let tokens = [];
@@ -59,7 +54,6 @@ function tokenizeLine(text) {
 }
 
 // ── 수식 파서 ──
-// 토큰 배열을 읽어 값을 계산 (원본 getVal 그대로)
 function getVal(expr) {
     const toks = tokenizeLine(expr).filter(t => t.type !== 'text' && t.type !== 'comment');
     if (toks.length === 0) return 0;
@@ -67,26 +61,23 @@ function getVal(expr) {
     const consume = () => toks[pos++];
     const peek    = () => toks[pos];
 
-    // 괄호(아~어) / 메모리값 / 숫자("그" 개수)
     function parseAtom() {
         let t = consume(); if (!t) return 0;
         if (t.type === 'bracket' && t.val === '아') { let res = parseExpr(); consume(); return res; }
         if (t.type === 'mem') return memory[resolveAddr(t.val)] || 0;
-        if (t.type === 'num') return t.val.length; // "그그그" → 3
+        if (t.type === 'num') return t.val.length;
         return 0;
     }
-    // 곱셈(.) / 나눗셈(..) / 나머지(...)
     function parseFactor() {
         let node = parseAtom();
         while (peek() && peek().type === 'op' && ['.', '..', '...'].includes(peek().val)) {
             let op = consume().val, right = parseAtom();
-            if (op === '.')   node *= right;
+            if (op === '.')        node *= right;
             else if (op === '..') node = Math.floor(node / right);
-            else              node %= right;
+            else                  node %= right;
         }
         return node;
     }
-    // 덧셈(,) / 뺄셈(,,)
     function parseTerm() {
         let node = parseFactor();
         while (peek() && peek().type === 'op' && [',', ',,'].includes(peek().val)) {
@@ -95,7 +86,6 @@ function getVal(expr) {
         }
         return node;
     }
-    // 비교: 같음(~) / 큼(;) / 크거나같음(;;)
     function parseExpr() {
         let node = parseTerm();
         while (peek() && peek().type === 'op' && ['~', ';', ';;'].includes(peek().val)) {
@@ -110,56 +100,59 @@ function getVal(expr) {
 }
 
 // ── 코드 실행 ──
-// @param code  {string} 그뭐냐 코드
-// @param input {string} 입력값 (줄바꿈으로 구분)
-// @returns { output: string, error: string }
-function runCode(code, input) {
-    // 실행 환경 초기화
+// @param code        {string} 그뭐냐 코드
+// @param input       {string} 입력값 (줄바꿈으로 구분)
+// @param timeLimitMs {number} 시간 제한 (밀리초)
+// @param memLimitMB  {number} 메모리 제한 (MB)
+// @returns { output, verdict }
+//   verdict: "AC" | "TLE" | "MLE" | "RE: 메시지"
+function runCode(code, input, timeLimitMs, memLimitMB) {
     memory = {};
     pc = 0;
     let outputBuffer = "";
     let inputLines   = input.split("\n");
     let inputIndex   = 0;
     let linesArr     = code.split("\n");
-    const MAX_STEPS  = 100000; // 무한루프 방지
-    let stepCount    = 0;
+    const memLimitBytes = memLimitMB * 1024 * 1024;
+    const startTime     = Date.now();
 
     try {
-        while (pc >= 0 && pc < linesArr.length && stepCount < MAX_STEPS) {
-            stepCount++;
+        while (pc >= 0 && pc < linesArr.length) {
+            // 시간 제한 체크
+            if (Date.now() - startTime > timeLimitMs) {
+                return { output: outputBuffer.trim(), verdict: "TLE" };
+            }
 
-            // 주석 제거 + 공백 제거
+            // 메모리 제한 체크 (키 개수 × 8바이트로 추정)
+            if (Object.keys(memory).length * 8 > memLimitBytes) {
+                return { output: outputBuffer.trim(), verdict: "MLE" };
+            }
+
             let fullLine = linesArr[pc].split('#')[0].trim();
             let jumped   = false;
 
             if (fullLine) {
                 if (fullLine.includes("뭐더라")) {
-                    // 대입: "주소뭐더라 값" → memory[주소] = 값
                     let [m, e] = fullLine.split("뭐더라");
                     memory[resolveAddr(m.trim())] = getVal(e.trim());
                 }
                 else if (fullLine.includes("진짜뭐지")) {
-                    // 문자 입력: 첫 글자의 ASCII 코드를 저장
                     let targetAddr = resolveAddr(fullLine.replace("진짜뭐지", "").trim());
                     let val = inputIndex < inputLines.length ? inputLines[inputIndex++] : "";
                     memory[targetAddr] = (val && val.length > 0) ? val.charCodeAt(0) : 0;
                 }
                 else if (fullLine.includes("진짜뭐냐")) {
-                    // 문자 출력: 숫자 → ASCII 문자
                     outputBuffer += String.fromCharCode(getVal(fullLine.replace("진짜뭐냐", "")));
                 }
                 else if (fullLine.includes("뭐지")) {
-                    // 숫자 입력
                     let targetAddr = resolveAddr(fullLine.replace("뭐지", "").trim());
                     let val = inputIndex < inputLines.length ? inputLines[inputIndex++] : "0";
                     memory[targetAddr] = parseInt(val) || 0;
                 }
                 else if (fullLine.includes("뭐냐")) {
-                    // 숫자 출력
                     outputBuffer += String(getVal(fullLine.replace("뭐냐", "")));
                 }
                 else if (fullLine.includes("있잖아")) {
-                    // 점프: pc += offset
                     pc += getVal(fullLine.replace("있잖아", ""));
                     jumped = true;
                 }
@@ -168,51 +161,44 @@ function runCode(code, input) {
             if (!jumped) pc++;
         }
 
-        if (stepCount >= MAX_STEPS) {
-            return { output: outputBuffer.trim(), error: "시간 초과 (" + MAX_STEPS + "회 초과)" };
-        }
-
-        return { output: outputBuffer.trim(), error: "" };
+        return { output: outputBuffer.trim(), verdict: "AC" };
 
     } catch (err) {
-        return { output: outputBuffer.trim(), error: "런타임 에러: " + err.message };
+        return { output: outputBuffer.trim(), verdict: "RE: " + err.message };
     }
 }
 
 
 // ════════════════════════════════════════════════════════
 //  2. 채점 UI 제어
-//     index.html의 버튼이 submitCode('1000') 호출
 // ════════════════════════════════════════════════════════
 var isJudging = false;
 
 async function submitCode(probId) {
-    // 중복 실행 방지
     if (isJudging) return;
 
-    // 문제 데이터 가져오기
     var prob = window.PROBLEMS[probId];
     if (!prob) { alert("문제 데이터를 찾을 수 없습니다: " + probId); return; }
 
-    // 에디터에서 코드 가져오기 (textarea)
     var code = document.getElementById("editor-" + probId).value.trim();
     if (!code) { alert("코드를 입력해주세요."); return; }
 
-    var tcs   = prob.testCases;
-    var total = tcs.length;
+    var tcs          = prob.testCases;
+    var total        = tcs.length;
+    var timeLimitMs  = prob.timeLimit * 1000;
+    var memLimitMB   = prob.memoryLimit;
 
-    // ── DOM 요소 참조 (index.html의 ID 규칙: 요소명-probId) ──
-    var btn         = document.getElementById("sBtn-"         + probId);
+    var btn          = document.getElementById("sBtn-"         + probId);
     var progressWrap = document.getElementById("progressWrap-" + probId);
     var progressFill = document.getElementById("progressFill-" + probId);
     var progressNum  = document.getElementById("progressNum-"  + probId);
     var progressText = document.getElementById("progressText-" + probId);
-    var resultBox   = document.getElementById("resultBox-"    + probId);
-    var errorLog    = document.getElementById("errorLog-"     + probId);
+    var resultBox    = document.getElementById("resultBox-"    + probId);
+    var errorLog     = document.getElementById("errorLog-"     + probId);
 
     // ── UI 초기화 ──
     isJudging = true;
-    btn.disabled = true;
+    btn.disabled    = true;
     btn.textContent = "채점 중...";
 
     progressWrap.style.display = "block";
@@ -228,57 +214,58 @@ async function submitCode(probId) {
     errorLog.textContent    = "";
 
     // ── 테스트케이스 순서대로 실행 ──
-    var allPassed    = true;
-    var firstFail    = "";
-
     for (var i = 0; i < total; i++) {
-        var tc = tcs[i];
+        var tc     = tcs[i];
+        var result = runCode(code, tc.in, timeLimitMs, memLimitMB);
+        var pct    = Math.round(((i + 1) / total) * 100);
 
-        // 진행 표시 업데이트
         progressNum.textContent  = (i + 1) + " / " + total;
-        var pct = Math.round(((i + 1) / total) * 100);
-
-        // 코드 실행 (동기 - 그뭐냐 엔진은 순수 JS)
-        var result = runCode(code, tc.in);
-
-        // 진행 바 업데이트
         progressFill.style.width = pct + "%";
         progressText.textContent = pct + "%";
 
-        // 결과 판정
-        if (result.error) {
-            allPassed = false;
-            if (!firstFail) firstFail = "[테스트 " + (i+1) + "] 에러\n" + result.error;
+        // 오답 / TLE / MLE / RE → 즉시 중단
+        var failed = false;
+        var failMsg = "";
+
+        if (result.verdict === "TLE") {
+            failed  = true;
+            failMsg = "[테스트 " + (i+1) + "] 시간 초과";
+        } else if (result.verdict === "MLE") {
+            failed  = true;
+            failMsg = "[테스트 " + (i+1) + "] 메모리 초과";
+        } else if (result.verdict.startsWith("RE")) {
+            failed  = true;
+            failMsg = "[테스트 " + (i+1) + "] 런타임 에러\n" + result.verdict.slice(4);
         } else if (result.output.trim() !== String(tc.out).trim()) {
-            allPassed = false;
-            if (!firstFail) {
-                firstFail =
-                    "[테스트 " + (i+1) + "]\n" +
-                    "입력:    " + tc.in.replace(/\n/g, " / ") + "\n" +
-                    "정답:    " + tc.out + "\n" +
-                    "내 출력: " + result.output;
-            }
+            failed  = true;
+            failMsg =
+                "[테스트 " + (i+1) + "] 틀렸습니다\n" +
+                "입력:    " + tc.in.replace(/\n/g, " / ") + "\n" +
+                "정답:    " + tc.out + "\n" +
+                "내 출력: " + result.output;
         }
 
-        // 브라우저가 화면을 업데이트할 수 있도록 잠깐 양보
-        // (이게 없으면 루프 중에 화면이 안 바뀜)
+        if (failed) {
+            progressFill.style.background = "var(--red)";
+            resultBox.style.display = "block";
+            resultBox.className     = "result-display res-fail";
+            resultBox.textContent   = failMsg.split("\n")[0]; // 첫 줄만 큰 글씨로
+            errorLog.style.display  = "block";
+            errorLog.textContent    = failMsg;
+            btn.disabled    = false;
+            btn.textContent = "다시 제출";
+            isJudging       = false;
+            return;
+        }
+
         await new Promise(function(r) { setTimeout(r, 80); });
     }
 
-    // ── 최종 결과 표시 ──
+    // ── 전부 통과 ──
+    progressFill.style.background = "var(--green)";
     resultBox.style.display = "block";
-
-    if (allPassed) {
-        progressFill.style.background = "var(--green)";
-        resultBox.className   = "result-display res-success";
-        resultBox.textContent = "맞았습니다!! 🎉";
-    } else {
-        progressFill.style.background = "var(--red)";
-        resultBox.className   = "result-display res-fail";
-        resultBox.textContent = "틀렸습니다";
-        errorLog.style.display  = "block";
-        errorLog.textContent    = firstFail;
-    }
+    resultBox.className     = "result-display res-success";
+    resultBox.textContent   = "맞았습니다!! 🎉";
 
     btn.disabled    = false;
     btn.textContent = "다시 제출";
@@ -288,10 +275,8 @@ async function submitCode(probId) {
 
 // ════════════════════════════════════════════════════════
 //  3. 탭 전환
-//     index.html 사이드바의 onclick="switchProblem('1000')"
 // ════════════════════════════════════════════════════════
 function switchProblem(probId) {
-    // 모든 페이지/탭 비활성화
     document.querySelectorAll('.prob-page').forEach(function(el) {
         el.classList.remove('active');
     });
@@ -299,7 +284,6 @@ function switchProblem(probId) {
         el.classList.remove('active');
     });
 
-    // 선택한 페이지/탭 활성화
     var page = document.getElementById("page-"  + probId);
     var tab  = document.getElementById("tab-"   + probId);
     if (page) page.classList.add('active');
@@ -309,13 +293,11 @@ function switchProblem(probId) {
 
 // ════════════════════════════════════════════════════════
 //  4. 페이지 로드 시 초기화
-//     테스트케이스 개수를 info-table에 표시
 // ════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
-    // 등록된 모든 문제의 TC 개수 표시
     Object.keys(window.PROBLEMS).forEach(function(probId) {
-        var prob  = window.PROBLEMS[probId];
-        var el    = document.getElementById("tcCount-" + probId);
+        var prob = window.PROBLEMS[probId];
+        var el   = document.getElementById("tcCount-" + probId);
         if (el) el.textContent = prob.testCases.length + "개";
     });
 });
