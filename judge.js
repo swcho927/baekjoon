@@ -1,143 +1,112 @@
 // ═══════════════════════════════════════════════════════
 //  judge.js  —  그뭐냐 언어 인터프리터 + 채점 엔진
 //
-//  외부 서버나 Pyodide 없이 브라우저에서 직접 실행.
-//  모든 채점은 runProgram() 한 함수로 처리됨.
+//  [공부 포인트] 인터프리터의 3단계 구조
+//    1) Tokenizer  : 소스코드 문자열 → 토큰 배열
+//    2) Parser     : 토큰 배열 → 값 (재귀 하강 파서)
+//    3) Interpreter: 명령어 토큰 → 메모리/IO 조작
 // ═══════════════════════════════════════════════════════
 
 
-// ── 1. 그뭐냐 언어 인터프리터 ────────────────────────────
+// ── 1. 인터프리터 ─────────────────────────────────────────
 //
-//  runProgram(code, inputLines) 를 호출하면:
-//    - code       : 그뭐냐 소스코드 (string)
-//    - inputLines : 입력값 배열 (예: ["3", "5"])
-//  반환값: { output: "8", error: null }
-//          오류 시: { output: "", error: "에러 메시지" }
-
+//  [공부 포인트] 순수 함수 설계 — 호출마다 독립된 실행 환경을 새로 만듦.
+//  전역 상태가 없으므로 여러 TC를 연속 실행해도 서로 영향 없음.
 function runProgram(code, inputLines) {
 
-    // 메모리: 주소(정수) → 값(정수) 매핑
-    const memory = {};
+    const memory  = {};       // 주소(정수) → 값(정수). 희소 배열처럼 사용.
+    let inputIdx  = 0;        // inputLines 를 앞에서부터 소비하는 포인터
+    let outputBuf = "";       // 출력 결과 누적 버퍼
+    const MAX_STEPS = 100000; // 무한루프 방지
 
-    // 입력 포인터: inputLines 를 순서대로 소비
-    let inputIdx = 0;
-
-    // 실행 결과 출력 버퍼
-    let outputBuf = "";
-
-    // 최대 실행 스텝 (무한루프 방지)
-    const MAX_STEPS = 100000;
-
-    // ── 주소 해결기 ──
-    // "그거"  → 그 1개, 거 1개 → addr = 1
-    // "그그거" → 그 2개, 거 1개 → addr = memory[2] (포인터)
-    // 일반 규칙: 거의 개수 - 1 만큼 역참조
+    // ── 주소 해결기 ──────────────────────────────────────
+    //  [공부 포인트] 포인터(간접 참조) 구현.
+    //  '그' 개수 = 기본 주소,  '거' 개수 - 1 = 역참조 횟수
+    //  "그거"   → 주소 1 (직접)
+    //  "그그거" → memory[2] (1단계 포인터)
     function resolveAddr(memStr) {
-        const geuCount = (memStr.match(/그/g) || []).length;
-        const geoCount = (memStr.match(/거/g) || []).length;
-        let addr = geuCount;
-        // 거가 2개 이상이면 포인터 역참조
-        for (let i = 0; i < geoCount - 1; i++) {
-            addr = memory[addr] || 0;
-        }
+        const geuCnt = (memStr.match(/그/g) || []).length;
+        const geoCnt = (memStr.match(/거/g) || []).length;
+        let addr = geuCnt;
+        for (let i = 0; i < geoCnt - 1; i++) addr = memory[addr] || 0;
         return addr;
     }
 
-    // ── 토크나이저 ──
-    // 한 줄 텍스트를 토큰 배열로 분해
+    // ── 토크나이저 ───────────────────────────────────────
+    //  [공부 포인트] 정규식 기반 렉싱(Lexing).
+    //  긴 패턴을 짧은 것보다 앞에 배치해야 올바르게 매칭됨.
+    //  (진짜뭐지 를 뭐지 보다 먼저 써야 하는 이유)
     function tokenizeLine(text) {
-        // 주석 제거 후 처리
         const noComment = text.split('#')[0];
-
-        // 우선순위 순서로 패턴 매칭
-        // 진짜뭐지/진짜뭐냐 를 뭐지/뭐냐 보다 먼저 매칭해야 함
         const regex = /(그+거+)|(그+)|(진짜뭐지|진짜뭐냐|뭐더라|뭐지|뭐냐|있잖아)|(아|어)|(\.\.\.|\.\.|\.|,,|,|;;|;|~)/g;
         const tokens = [];
-        let lastIdx = 0;
 
         noComment.replace(regex, (match, mem, num, cmd, bracket, op, offset) => {
-            if (offset > lastIdx) {
-                // 매칭되지 않은 텍스트는 무시 (공백 등)
-            }
-            if      (mem)     tokens.push({ type: 'mem',     val: mem,     addr: resolveAddr(mem) });
+            if      (mem)     tokens.push({ type: 'mem',     val: mem,  addr: resolveAddr(mem) });
             else if (num)     tokens.push({ type: 'num',     val: num });
             else if (cmd)     tokens.push({ type: 'cmd',     val: cmd });
             else if (bracket) tokens.push({ type: 'bracket', val: bracket });
             else if (op)      tokens.push({ type: 'op',      val: op });
-            lastIdx = offset + match.length;
         });
 
         return tokens;
     }
 
-    // ── 수식 파서 ──
-    // 토큰 배열을 받아 정수 값을 반환
-    // 연산자 우선순위:
-    //   가장 낮음: ~ (같음), ; (크다), ;; (크거나같음)
-    //   중간:     , (더하기), ,, (빼기)
-    //   높음:     . (곱하기), .. (나누기), ... (나머지)
-    //   가장 높음: 아...어 (괄호), 메모리값, 그 개수
+    // ── 수식 파서 (재귀 하강 파서) ───────────────────────
+    //  [공부 포인트] Recursive Descent Parser.
+    //  연산자 우선순위를 함수 호출 깊이로 표현:
+    //    parseExpr   : ~  ;  ;;   (비교, 가장 낮음)
+    //    parseTerm   : ,  ,,      (덧뺄셈)
+    //    parseFactor : .  ..  ... (곱나눗셈, 높음)
+    //    parseAtom   : 괄호, 메모리, 숫자 (가장 높음)
+    //
+    //  낮은 우선순위 함수가 높은 우선순위 함수를 호출하는 구조 덕분에
+    //  수학적 우선순위가 자동으로 지켜짐.
     function evaluate(tokens) {
         let pos = 0;
-
         const consume = () => tokens[pos++];
         const peek    = () => tokens[pos];
 
-        // 원자값: 괄호, 메모리, 숫자 리터럴
         function parseAtom() {
             const t = consume();
             if (!t) return 0;
             if (t.type === 'bracket' && t.val === '아') {
-                // 괄호 열기: 닫는 '어' 까지 수식 평가
                 const res = parseExpr();
                 consume(); // '어' 소비
                 return res;
             }
-            if (t.type === 'mem') {
-                // 메모리 주소의 현재 값 반환
-                return memory[resolveAddr(t.val)] || 0;
-            }
-            if (t.type === 'num') {
-                // 그 개수 = 숫자 리터럴
-                return t.val.length;
-            }
+            if (t.type === 'mem') return memory[resolveAddr(t.val)] || 0;
+            if (t.type === 'num') return t.val.length; // '그' 개수 = 숫자값
             return 0;
         }
 
-        // 곱셈/나눗셈/나머지 우선순위
         function parseFactor() {
             let node = parseAtom();
-            while (peek() && peek().type === 'op' && ['.', '..', '...'].includes(peek().val)) {
-                const op = consume().val;
-                const right = parseAtom();
-                if      (op === '.')   node = node * right;
-                else if (op === '..')  node = right !== 0 ? Math.floor(node / right) : 0;
-                else if (op === '...') node = right !== 0 ? node % right : 0;
+            while (peek()?.type === 'op' && ['.','..','...'].includes(peek().val)) {
+                const op = consume().val, r = parseAtom();
+                if (op === '.')   node = node * r;
+                else if (op === '..') node = r ? Math.floor(node / r) : 0;
+                else              node = r ? node % r : 0;
             }
             return node;
         }
 
-        // 덧셈/뺄셈 우선순위
         function parseTerm() {
             let node = parseFactor();
-            while (peek() && peek().type === 'op' && [',', ',,'].includes(peek().val)) {
-                const op = consume().val;
-                const right = parseFactor();
-                if (op === ',')  node = node + right;
-                else             node = node - right;
+            while (peek()?.type === 'op' && [',',',,'].includes(peek().val)) {
+                const op = consume().val, r = parseFactor();
+                node = op === ',' ? node + r : node - r;
             }
             return node;
         }
 
-        // 비교 연산자 (가장 낮은 우선순위)
         function parseExpr() {
             let node = parseTerm();
-            while (peek() && peek().type === 'op' && ['~', ';', ';;'].includes(peek().val)) {
-                const op = consume().val;
-                const right = parseTerm();
-                if      (op === '~')  node = node === right ? 1 : 0;
-                else if (op === ';')  node = node > right   ? 1 : 0;
-                else if (op === ';;') node = node >= right  ? 1 : 0;
+            while (peek()?.type === 'op' && ['~',';',';;'].includes(peek().val)) {
+                const op = consume().val, r = parseTerm();
+                if (op === '~')       node = node === r ? 1 : 0;
+                else if (op === ';')  node = node > r   ? 1 : 0;
+                else                  node = node >= r  ? 1 : 0;
             }
             return node;
         }
@@ -145,104 +114,77 @@ function runProgram(code, inputLines) {
         return parseExpr();
     }
 
-    // ── 실행 루프 ──
+    // ── 실행 루프 ─────────────────────────────────────────
+    //  [공부 포인트] Fetch-Decode-Execute 사이클 (CPU 동작 원리와 동일).
+    //    Fetch  : pc(프로그램 카운터) 위치의 줄을 읽음
+    //    Decode : 토크나이징 후 명령어(cmd) 토큰 찾기
+    //    Execute: switch 문으로 명령어에 맞는 동작 수행
     const lines = code.split('\n');
-    let pc = 0;      // 프로그램 카운터 (현재 줄 번호)
-    let steps = 0;   // 실행한 명령어 수 (무한루프 감지용)
+    let pc = 0, steps = 0;
 
     try {
         while (pc >= 0 && pc < lines.length) {
-
-            // 무한루프 방지
-            if (++steps > MAX_STEPS) {
+            if (++steps > MAX_STEPS)
                 return { output: outputBuf, error: `실행 제한 초과 (${MAX_STEPS}스텝)` };
-            }
 
-            // 주석 제거 & 앞뒤 공백 제거
-            const line = lines[pc].split('#')[0].trim();
-            const tokens = tokenizeLine(line);
-
-            // 빈 줄이거나 주석만 있는 줄은 건너뜀
-            if (tokens.length === 0) { pc++; continue; }
-
-            // 명령어 토큰 찾기
+            const tokens = tokenizeLine(lines[pc]);
             const cmdTok = tokens.find(t => t.type === 'cmd');
-
             if (!cmdTok) { pc++; continue; }
 
-            let jumped = false; // 이번 줄에서 점프가 발생했는지
+            let jumped = false;
 
             switch (cmdTok.val) {
 
-                // 뭐더라: 메모리 주소에 값 저장
-                // 형식: <주소> 뭐더라 <수식>
+                // 뭐더라: 할당  →  <주소> 뭐더라 <수식>
                 case '뭐더라': {
-                    const cmdIdx = tokens.indexOf(cmdTok);
-                    const addrToks  = tokens.slice(0, cmdIdx);   // 왼쪽 = 주소
-                    const valueToks = tokens.slice(cmdIdx + 1);   // 오른쪽 = 값 수식
-
-                    // 주소 토큰이 메모리 토큰이어야 함
-                    const addrTok = addrToks.find(t => t.type === 'mem');
-                    if (addrTok) {
-                        const targetAddr = resolveAddr(addrTok.val);
-                        memory[targetAddr] = evaluate(valueToks);
-                    }
+                    const ci  = tokens.indexOf(cmdTok);
+                    const adr = tokens.slice(0, ci).find(t => t.type === 'mem');
+                    if (adr) memory[resolveAddr(adr.val)] = evaluate(tokens.slice(ci + 1));
                     break;
                 }
 
-                // 뭐지: 숫자를 입력받아 메모리에 저장
-                // 형식: <주소> 뭐지
+                // 뭐지: 숫자 입력  →  <주소> 뭐지
                 case '뭐지': {
-                    const cmdIdx = tokens.indexOf(cmdTok);
-                    const addrToks = tokens.slice(0, cmdIdx);
-                    const addrTok  = addrToks.find(t => t.type === 'mem');
-                    if (addrTok) {
-                        const targetAddr = resolveAddr(addrTok.val);
-                        // 준비된 입력값을 순서대로 소비
+                    const ci  = tokens.indexOf(cmdTok);
+                    const adr = tokens.slice(0, ci).find(t => t.type === 'mem');
+                    if (adr) {
                         const raw = inputLines[inputIdx++];
-                        memory[targetAddr] = raw !== undefined ? (parseInt(raw) || 0) : 0;
+                        memory[resolveAddr(adr.val)] = raw !== undefined ? (parseInt(raw) || 0) : 0;
                     }
                     break;
                 }
 
-                // 뭐냐: 수식 값을 출력 (숫자)
-                // 형식: 뭐냐 <수식>
+                // 뭐냐: 숫자 출력  →  뭐냐 <수식>
                 case '뭐냐': {
-                    const cmdIdx   = tokens.indexOf(cmdTok);
-                    const valueToks = tokens.slice(cmdIdx + 1);
-                    outputBuf += String(evaluate(valueToks));
+                    const ci = tokens.indexOf(cmdTok);
+                    outputBuf += String(evaluate(tokens.slice(ci + 1)));
                     break;
                 }
 
-                // 진짜뭐지: 문자 1개를 입력받아 ASCII 코드로 메모리에 저장
+                // 진짜뭐지: 문자 입력 (ASCII 코드로 저장)  →  <주소> 진짜뭐지
                 case '진짜뭐지': {
-                    const cmdIdx = tokens.indexOf(cmdTok);
-                    const addrToks = tokens.slice(0, cmdIdx);
-                    const addrTok  = addrToks.find(t => t.type === 'mem');
-                    if (addrTok) {
-                        const targetAddr = resolveAddr(addrTok.val);
+                    const ci  = tokens.indexOf(cmdTok);
+                    const adr = tokens.slice(0, ci).find(t => t.type === 'mem');
+                    if (adr) {
                         const raw = inputLines[inputIdx++];
-                        memory[targetAddr] = (raw && raw.length > 0) ? raw.charCodeAt(0) : 0;
+                        memory[resolveAddr(adr.val)] = raw?.length > 0 ? raw.charCodeAt(0) : 0;
                     }
                     break;
                 }
 
-                // 진짜뭐냐: 메모리 값을 문자로 출력 (ASCII)
+                // 진짜뭐냐: 문자 출력  →  진짜뭐냐 <수식>
                 case '진짜뭐냐': {
-                    const cmdIdx    = tokens.indexOf(cmdTok);
-                    const valueToks = tokens.slice(cmdIdx + 1);
-                    outputBuf += String.fromCharCode(evaluate(valueToks));
+                    const ci = tokens.indexOf(cmdTok);
+                    outputBuf += String.fromCharCode(evaluate(tokens.slice(ci + 1)));
                     break;
                 }
 
-                // 있잖아: 상대적 줄 이동 (점프)
-                // 형식: 있잖아 <수식>
-                // 수식이 0이면 다음 줄로, 양수면 앞으로, 음수면 뒤로
+                // 있잖아: 상대 점프  →  있잖아 <수식>
+                //  [공부 포인트] 절대 주소가 아닌 상대 오프셋으로 점프.
+                //  0 이면 제자리(무한루프), 양수면 아래로, 음수면 위로.
                 case '있잖아': {
-                    const cmdIdx    = tokens.indexOf(cmdTok);
-                    const valueToks = tokens.slice(cmdIdx + 1);
-                    const offset    = evaluate(valueToks);
-                    pc += offset;
+                    const ci = tokens.indexOf(cmdTok);
+                    pc += evaluate(tokens.slice(ci + 1));
                     jumped = true;
                     break;
                 }
@@ -250,41 +192,41 @@ function runProgram(code, inputLines) {
 
             if (!jumped) pc++;
         }
-
     } catch (err) {
         return { output: outputBuf, error: String(err) };
     }
 
-    // 출력 결과의 앞뒤 공백 제거 후 반환
     return { output: outputBuf.trim(), error: null };
 }
 
 
 // ── 2. 탭 전환 ───────────────────────────────────────────
-//
-//  사이드바 클릭 시 해당 문제 페이지로 전환
+//  [공부 포인트] 실제 페이지 이동 없이 CSS display 를 토글해서
+//  SPA(Single Page Application) 처럼 동작하게 만드는 패턴.
 function switchProblem(prob) {
-    // 모든 페이지 비활성화
     document.querySelectorAll('.prob-page').forEach(p => p.classList.remove('active'));
-    // 모든 사이드바 항목 비활성화
     document.querySelectorAll('.sidebar-item').forEach(a => a.classList.remove('active'));
-    // 선택한 페이지와 탭 활성화
     document.getElementById(`page-${prob}`).classList.add('active');
     document.getElementById(`tab-${prob}`).classList.add('active');
 }
 
 
 // ── 3. 채점 함수 ─────────────────────────────────────────
-//
-//  submitCode('aplusb') 처럼 문제 키를 넘기면
-//  해당 문제의 TC를 전부 돌려서 결과를 UI에 표시
+//  [공부 포인트] async/await + setTimeout(0) 패턴.
+//  JS는 싱글 스레드라 루프가 돌 때 UI가 멈춤.
+//  await new Promise(r => setTimeout(r, 0)) 로 루프마다 브라우저에
+//  렌더링 기회를 줘서 프로그레스 바가 실시간으로 업데이트됨.
 async function submitCode(prob) {
+
+    // [공부 포인트] 방어적 프로그래밍 — 문제가 등록됐는지 먼저 확인
+    if (!window.PROBLEMS[prob]) {
+        alert(`문제 "${prob}" 를 찾을 수 없습니다.`);
+        return;
+    }
 
     const problem  = window.PROBLEMS[prob];
     const tcList   = problem.testCases;
-
-    // DOM 요소 가져오기
-    const editor   = document.getElementById(`editor-${prob}`);
+    const code     = document.getElementById(`editor-${prob}`).value.trim();
     const resBox   = document.getElementById(`resultBox-${prob}`);
     const errLog   = document.getElementById(`errorLog-${prob}`);
     const progWrap = document.getElementById(`progressWrap-${prob}`);
@@ -293,15 +235,9 @@ async function submitCode(prob) {
     const progNum  = document.getElementById(`progressNum-${prob}`);
     const btn      = document.getElementById(`sBtn-${prob}`);
 
-    const code = editor.value.trim();
+    if (!code) { alert('코드를 입력해주세요!'); return; }
 
-    // 빈 코드 제출 방지
-    if (!code) {
-        alert('코드를 입력해주세요!');
-        return;
-    }
-
-    // ── UI 초기화 ──
+    // UI 초기화
     resBox.style.display   = 'none';
     errLog.style.display   = 'none';
     progWrap.style.display = 'block';
@@ -309,34 +245,23 @@ async function submitCode(prob) {
     btn.innerText          = '채점 중...';
 
     // 프로그레스 업데이트 헬퍼
-    const setProgress = (current) => {
-        const pct = tcList.length === 0 ? 100 : Math.floor(current / tcList.length * 100);
+    const setProgress = (i) => {
+        const pct = tcList.length ? Math.floor(i / tcList.length * 100) : 100;
         progFill.style.width = pct + '%';
         progText.innerText   = pct + '%';
-        progNum.innerText    = `${current} / ${tcList.length}`;
+        progNum.innerText    = `${i} / ${tcList.length}`;
     };
 
     setProgress(0);
 
-    // ── 채점 루프 ──
-    // setTimeout(0) 으로 브라우저에게 렌더링 기회를 줌
-    // → 프로그레스 바가 실시간으로 업데이트됨
     for (let i = 0; i < tcList.length; i++) {
-
-        // 브라우저가 UI를 업데이트할 수 있도록 잠깐 양보
+        // 브라우저에게 렌더링 기회를 줌 → 프로그레스 바 실시간 갱신
         await new Promise(r => setTimeout(r, 0));
-
         setProgress(i);
 
-        const tc = tcList[i];
-
-        // 입력을 줄 단위로 분리해서 인터프리터에 전달
-        const inputLines = tc.in.split('\n').map(s => s.trim()).filter(s => s !== '');
-
-        // 그뭐냐 인터프리터 실행
+        const inputLines = tcList[i].in.split('\n').map(s => s.trim()).filter(Boolean);
         const result = runProgram(code, inputLines);
 
-        // ── 런타임 에러 ──
         if (result.error) {
             progWrap.style.display = 'none';
             resBox.style.display   = 'block';
@@ -344,13 +269,10 @@ async function submitCode(prob) {
             resBox.innerText       = '런타임 에러';
             errLog.style.display   = 'block';
             errLog.innerText       = `케이스 ${i + 1} 에러\n\n${result.error}`;
-            btn.disabled = false;
-            btn.innerText = '다시 제출';
-            return;
+            btn.disabled = false; btn.innerText = '다시 제출'; return;
         }
 
-        // ── 오답 ──
-        if (result.output !== tc.out) {
+        if (result.output !== tcList[i].out) {
             progWrap.style.display = 'none';
             resBox.style.display   = 'block';
             resBox.className       = 'result-display res-fail';
@@ -358,30 +280,29 @@ async function submitCode(prob) {
             errLog.style.display   = 'block';
             errLog.innerText =
                 `케이스 ${i + 1} 실패\n` +
-                `입력:   ${tc.in.replace(/\n/g, ' ')}\n` +
-                `기댓값: ${tc.out}\n` +
+                `입력:    ${tcList[i].in.replace(/\n/g, ' ')}\n` +
+                `기댓값:  ${tcList[i].out}\n` +
                 `내 출력: ${result.output}`;
-            btn.disabled = false;
-            btn.innerText = '다시 제출';
-            return;
+            btn.disabled = false; btn.innerText = '다시 제출'; return;
         }
     }
 
-    // ── 전체 통과 ──
+    // 전체 통과
     setProgress(tcList.length);
-    await new Promise(r => setTimeout(r, 300)); // 100% 잠깐 보여주기
+    await new Promise(r => setTimeout(r, 300));
     progWrap.style.display = 'none';
     resBox.style.display   = 'block';
     resBox.className       = 'result-display res-success';
     resBox.innerText       = '맞았습니다!!';
-    btn.disabled  = false;
-    btn.innerText = '다시 제출';
+    btn.disabled = false; btn.innerText = '다시 제출';
 }
 
 
 // ── 4. 초기화 ─────────────────────────────────────────────
-//
-//  페이지 로드 완료 후 모든 문제의 TC 생성
+//  [공부 포인트] DOMContentLoaded 이벤트.
+//  HTML 파싱이 완전히 끝난 후 실행되므로 getElementById 가 안전하게 동작.
+//  judge.js 는 <body> 맨 아래에 로드되므로 problems/*.js 는 이미 실행됐고
+//  window.PROBLEMS 에 모든 문제가 등록된 상태임.
 document.addEventListener('DOMContentLoaded', () => {
     Object.values(window.PROBLEMS).forEach(prob => prob.generateTC());
 });
