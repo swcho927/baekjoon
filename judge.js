@@ -9,13 +9,12 @@
 //    1. 그뭐냐 인터프리터 (resolveAddr, tokenizeLine, getVal, runCode)
 //    2. 채점 UI 제어 (submitCode)
 //    3. 탭 전환 (switchProblem)
-//    4. 초기화 (페이지 로드 시 테스트케이스 개수 표시)
+//    4. 초기화 (페이지 로드 시 테스트케이스 개수 표시 + 기본 코드 삽입)
 // ════════════════════════════════════════════════════════
 
 
 // ════════════════════════════════════════════════════════
 //  1. 그뭐냐 인터프리터 핵심 로직
-//     원본 컴파일러에서 DOM 의존성 제거, 순수 실행 엔진
 // ════════════════════════════════════════════════════════
 
 var memory = {};
@@ -100,12 +99,6 @@ function getVal(expr) {
 }
 
 // ── 코드 실행 ──
-// @param code        {string} 그뭐냐 코드
-// @param input       {string} 입력값 (줄바꿈으로 구분)
-// @param timeLimitMs {number} 시간 제한 (밀리초)
-// @param memLimitMB  {number} 메모리 제한 (MB)
-// @returns { output, verdict }
-//   verdict: "AC" | "TLE" | "MLE" | "RE: 메시지"
 function runCode(code, input, timeLimitMs, memLimitMB) {
     memory = {};
     pc = 0;
@@ -216,12 +209,10 @@ async function submitCode(probId) {
         var result = runCode(code, tc.in, timeLimitMs, memLimitMB);
         var pct    = Math.round(((i + 1) / total) * 100);
 
-        // 진행 바 업데이트
         progressNum.textContent  = (i + 1) + " / " + total;
         progressFill.style.width = pct + "%";
         progressText.textContent = pct + "%";
 
-        // 판정
         var verdict = result.verdict;
         var failed  = verdict !== "AC";
         var failMsg = "";
@@ -241,8 +232,6 @@ async function submitCode(probId) {
                 "내 출력: " + result.output;
         }
 
-        // 화면 업데이트 후 판정 결과 반영
-        // (await 로 브라우저에게 렌더링 기회를 준 뒤 중단)
         await new Promise(function(r) { setTimeout(r, 80); });
 
         if (failed) {
@@ -291,11 +280,22 @@ function switchProblem(probId) {
 
 // ════════════════════════════════════════════════════════
 //  4. 페이지 로드 시 초기화
+//     - 테스트케이스 개수 표시
+//     - 기본 코드 textarea에 삽입
 // ════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
     Object.keys(window.PROBLEMS).forEach(function(probId) {
         var prob = window.PROBLEMS[probId];
-        var el   = document.getElementById("tcCount-" + probId);
-        if (el) el.textContent = prob.testCases.length + "개";
+
+        // 테스트케이스 개수 표시
+        var tcEl = document.getElementById("tcCount-" + probId);
+        if (tcEl) tcEl.textContent = prob.testCases.length + "개";
+
+        // 기본 코드 삽입
+        // textarea가 비어있을 때만 삽입 (사용자가 이미 작성 중이면 덮어쓰지 않음)
+        var editorEl = document.getElementById("editor-" + probId);
+        if (editorEl && prob.defaultCode && editorEl.value.trim() === "") {
+            editorEl.value = prob.defaultCode;
+        }
     });
 });
