@@ -21,38 +21,17 @@ var memory = {};
 var pc = 0;
 
 // ── 주소 해결기 ──
-// "거" 앞부분을 수식으로 계산해서 주소를 결정
-// 예: "그그거"  → getVal("그그") = 2 → 2번 주소
-//     "아그그,,그어거" → getVal("아그그,,그어") = 2-1 = 1 → 1번 주소
-//     "그거거"  → getVal("그거") = memory[1] → memory[1]번 주소 (포인터)
 function resolveAddr(memStr) {
-    // "거"가 없으면 그냥 수식으로 계산
-    var geoIdx = memStr.indexOf("거");
-    if (geoIdx === -1) return getVal(memStr);
-
-    // "거" 앞부분을 수식으로 계산 → 그게 기본 주소
-    var before = memStr.slice(0, geoIdx);
-    var addr   = getVal(before);
-
-    // "거" 뒷부분이 남아있으면 포인터 역참조
-    var after = memStr.slice(geoIdx + 1);
-    if (after.length > 0) {
-        addr = memory[addr] || 0;
-        // 뒷부분에 또 "거"가 있으면 재귀적으로 처리
-        addr = resolveAddr(after.replace(/^거*/, function(m) {
-            var result = addr;
-            for (var i = 0; i < m.length; i++) result = memory[result] || 0;
-            return "";
-        }));
-    } else {
+    let geuCount = (memStr.match(/그/g) || []).length;
+    let geoCount = (memStr.match(/거/g) || []).length;
+    let addr = geuCount;
+    for (let i = 0; i < geoCount - 1; i++) {
         addr = memory[addr] || 0;
     }
-
     return addr;
 }
 
 // ── 토크나이저 ──
-// resolveAddr 호출 제거 (순환 참조 방지)
 function tokenizeLine(text) {
     const regex = /(#.*)|(그+거+)|(그+)|(진짜뭐지|진짜뭐냐|뭐더라|뭐지|뭐냐|있잖아)|(아|어)|(\.\.\.|\.\.|\.|,,|,|;;|;|~)/g;
     let tokens = [];
@@ -61,7 +40,7 @@ function tokenizeLine(text) {
     text.replace(regex, (match, comm, mem, num, cmd, bracket, op, offset) => {
         if (offset > lastIdx) tokens.push({ type: 'text',    val: text.slice(lastIdx, offset) });
         if      (comm)    tokens.push({ type: 'comment', val: comm });
-        else if (mem)     tokens.push({ type: 'mem',     val: mem });
+        else if (mem)     tokens.push({ type: 'mem',     val: mem, addr: resolveAddr(mem) });
         else if (num)     tokens.push({ type: 'num',     val: num });
         else if (cmd)     tokens.push({ type: 'cmd',     val: cmd });
         else if (bracket) tokens.push({ type: 'bracket', val: bracket });
@@ -308,11 +287,9 @@ document.addEventListener('DOMContentLoaded', function() {
     Object.keys(window.PROBLEMS).forEach(function(probId) {
         var prob = window.PROBLEMS[probId];
 
-        // 테스트케이스 개수 표시
         var tcEl = document.getElementById("tcCount-" + probId);
         if (tcEl) tcEl.textContent = prob.testCases.length + "개";
 
-        // 기본 코드 삽입
         var editorEl = document.getElementById("editor-" + probId);
         if (editorEl && prob.defaultCode && editorEl.value.trim() === "") {
             editorEl.value = prob.defaultCode;
