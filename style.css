@@ -1,423 +1,369 @@
-/* ════════════════════════════════════════════════
-   style.css  ─  그뭐냐 Judge 스타일시트
-   테마: 검정 + 어두운 파란색
-   ════════════════════════════════════════════════ */
-
+/* ── 전역 변수 ── */
 :root {
-    --bg:         #0d1117;   /* 전체 배경 */
-    --bg2:        #0d1f35;   /* 사이드바 + 카드 배경 */
-    --bg3:        #0a1929;   /* 에디터/예제 배경 */
-    --border:     #1a3a5c;   /* 테두리 */
-    --accent:     #1e6ab4;   /* 포인트: 중간 파란색 */
-    --accent-bright: #4a9eff; /* 밝은 파란색 (강조) */
-    --text:       #d0dce8;   /* 기본 텍스트 */
-    --muted:      #4a6a8a;   /* 흐린 텍스트 */
-    --green:      #56d364;   /* 정답 */
-    --red:        #f85149;   /* 오답/에러 */
-    --yellow:     #cca700;   /* 진행중 */
+    --bg-main:          #0d1117;
+    --bg-card:          #161b22;
+    --border:           #30363d;
+    --blue:             #58a6ff;
+    --blue-dark:        #1f6feb;
+    --green:            #3fb950;
+    --red:              #f85149;
+    --yellow:           #e3b341;
+    --text:             #e6edf3;
+    --text-muted:       #8b949e;
+    --text-subtle:      #6e7681;
+    --sidebar-w:        240px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    background: var(--bg);
+    background: var(--bg-main);
     color: var(--text);
-    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 16px; /* 기본 글씨 크기 키움 */
-    min-height: 100vh;
-    line-height: 1.7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
 }
 
-/* ── 네비게이션 바 ── */
-.navbar {
-    background: var(--bg2);
-    border-bottom: 2px solid var(--border);
-    padding: 15px 28px;
+/* ── 상단 바 ── */
+.topbar {
+    height: 52px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    gap: 14px;
-    position: sticky;
-    top: 0;
-    z-index: 200;
-    height: 56px;
+    gap: 12px;
+    padding: 0 20px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
 }
-.navbar-brand {
-    font-family: 'JetBrains Mono', monospace;
+.topbar-brand {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--blue);
+    letter-spacing: 0.5px;
+}
+.topbar-brand span { color: var(--text); }
+.topbar-divider { width: 1px; height: 18px; background: var(--border); }
+.topbar-sub { font-size: 0.8rem; color: var(--text-subtle); }
+
+/* ── 전체 레이아웃 ── */
+.layout {
+    display: flex;
+    margin-top: 52px;
+    min-height: calc(100vh - 52px);
+}
+
+/* ── 사이드바 ── */
+.sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 52px;
+    left: 0;
+    height: calc(100vh - 52px);
+    overflow-y: auto;
+    padding: 16px 0;
+}
+.sidebar-label {
+    font-size: 0.68rem;
     font-weight: 700;
-    font-size: 1.2rem;
-    color: var(--accent-bright);
-    letter-spacing: 2px;
-    text-decoration: none;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 14px 8px;
 }
-.engine-status {
-    margin-left: auto;
+.sidebar-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.85rem;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+    transition: all 0.12s;
+    user-select: none;
 }
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    animation: blink 1.2s infinite;
+.sidebar-item:hover {
+    background: rgba(88,166,255,0.06);
+    border-left-color: var(--border);
 }
-.status-dot.ready { background: var(--green); animation: none; }
-.status-dot.error { background: var(--red);   animation: none; }
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.2; }
+.sidebar-item.active {
+    background: rgba(88,166,255,0.1);
+    border-left-color: var(--blue);
 }
-
-/* ── 전체 레이아웃: 사이드바 + 메인 ── */
-.layout {
-    display: flex;
-    min-height: calc(100vh - 56px);
-}
-
-/* ── 왼쪽 사이드바 (문제 목록) ── */
-.sidebar {
-    width: 220px;
-    min-width: 220px;
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    padding: 24px 0;
-    position: sticky;
-    top: 56px;         /* 네비바 아래에 고정 */
-    height: calc(100vh - 56px);
-    overflow-y: auto;
+.sidebar-num {
+    font-size: 0.72rem;
+    color: var(--text-subtle);
+    min-width: 36px;
 }
 .sidebar-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--muted);
-    letter-spacing: 2px;
-    padding: 0 20px 12px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
+    font-size: 0.86rem;
+    color: var(--text-muted);
 }
-/* 문제 목록 각 항목 */
-.prob-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    color: var(--muted);
-    border-left: 3px solid transparent;
-    transition: all 0.15s;
-    text-decoration: none;
-}
-.prob-item:hover {
-    background: rgba(30, 106, 180, 0.15);
-    color: var(--text);
-}
-/* 현재 선택된 문제 강조 */
-.prob-item.active {
-    background: rgba(74, 158, 255, 0.12);
-    color: var(--accent-bright);
-    border-left-color: var(--accent-bright);
-    font-weight: 700;
-}
-.prob-item-num {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.82rem;
-    color: var(--muted);
-}
-.prob-item.active .prob-item-num {
-    color: var(--accent-bright);
+.sidebar-item.active .sidebar-title {
+    color: var(--blue);
+    font-weight: 600;
 }
 
-/* ── 메인 콘텐츠 영역 ── */
-.main {
+/* ── 메인 콘텐츠 ── */
+.main-content {
+    margin-left: var(--sidebar-w);
     flex: 1;
-    max-width: 860px;
-    padding: 44px 36px 80px;
+    min-width: 0;
+}
+
+/* 탭 전환: 활성 페이지만 표시 */
+.prob-page        { display: none; }
+.prob-page.active { display: block; }
+
+.container {
+    max-width: 900px;
+    padding: 36px 32px;
     margin: 0 auto;
 }
 
 /* ── 문제 헤더 ── */
 .problem-header {
-    margin-bottom: 28px;
-    padding-bottom: 20px;
+    padding-bottom: 18px;
     border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
 }
-.problem-num {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--accent-bright);
-    font-size: 0.85rem;
-    margin-bottom: 6px;
-    letter-spacing: 1px;
+.problem-number {
+    font-size: 0.72rem;
+    color: var(--text-subtle);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
 }
 .problem-title {
-    font-size: 2.2rem;
-    font-weight: 900;
-    color: #ffffff;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text);
 }
 
-/* ── 정보 테이블 (테스트케이스 개수 없앰) ── */
+/* ── 정보 테이블 ── */
 .info-table {
-    display: flex;
-    gap: 1px;
-    background: var(--border);
+    width: 100%;
+    border-collapse: separate;
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow: hidden;
-    margin: 22px 0 38px;
+    margin-bottom: 28px;
 }
-.info-cell {
-    flex: 1;
-    background: var(--bg2);
-    padding: 16px 12px;
+.info-table th {
+    background: rgba(48,54,61,0.5);
+    color: var(--text-subtle);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
     text-align: center;
 }
-.info-cell .label {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-bottom: 5px;
-}
-.info-cell .value {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    font-size: 1.05rem;
-    color: var(--text);
+.info-table td {
+    padding: 13px 14px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.92rem;
 }
 
 /* ── 섹션 제목 ── */
 .section-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 700;
-    color: var(--accent-bright);
-    margin: 34px 0 12px;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin: 24px 0 8px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    letter-spacing: 1px;
+    gap: 7px;
 }
-.section-title::before { content: "//"; color: var(--muted); }
+.section-title::before {
+    content: "";
+    width: 3px; height: 13px;
+    background: var(--blue);
+    border-radius: 2px;
+    flex-shrink: 0;
+}
 
-/* ── 문제 설명 박스 ── */
+/* ── 콘텐츠 박스 ── */
 .content-box {
-    background: var(--bg2);
+    background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px 24px;
-    font-size: 1.05rem;
-    line-height: 1.85;
+    border-radius: 7px;
+    padding: 16px 20px;
+    font-size: 0.92rem;
+    line-height: 1.8;
 }
 
 /* ── 예제 그리드 ── */
-.tc-grid {
+.examples-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-bottom: 14px;
+    margin-top: 4px;
 }
-.tc-box {
-    background: var(--bg3);
+.example-block { display: flex; flex-direction: column; gap: 5px; }
+.example-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.example-content {
+    background: #010409;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-}
-.tc-box-header {
-    padding: 8px 14px;
-    font-size: 0.78rem;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    font-family: 'JetBrains Mono', monospace;
-}
-.tc-box-content {
-    padding: 14px 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
-    color: var(--accent-bright);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.86rem;
+    color: #7ee787;
     white-space: pre-wrap;
-    min-height: 48px;
+    flex: 1;
 }
 
-/* ── 제출 섹션 ── */
+/* ── 제출 영역 ── */
 .submit-section {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--accent);
-    border-radius: 12px;
-    padding: 28px;
-    margin-top: 52px;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
 }
-.submit-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    color: var(--muted);
-    margin-bottom: 16px;
-}
-
-#editor-container {
-    height: 380px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 14px;
-}
-
-#submit-btn {
-    width: 100%;
-    padding: 16px;
-    background: var(--accent);
-    color: #ffffff;
-    font-weight: 900;
-    font-size: 1.1rem;
-    font-family: 'JetBrains Mono', monospace;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.15s, transform 0.1s;
-    letter-spacing: 1px;
-}
-#submit-btn:hover:not(:disabled) {
-    background: var(--accent-bright);
-    transform: translateY(-1px);
-}
-#submit-btn:disabled {
-    background: var(--border);
-    color: var(--muted);
-    cursor: not-allowed;
-}
-
-/* ════════════════════════════════════════════════
-   채점 진행 영역
-   ════════════════════════════════════════════════ */
-#progress-section {
-    display: none;
-    margin-top: 24px;
-}
-
-/* 퍼센트 숫자: 크고 눈에 잘 띄게 */
-.progress-header {
+.submit-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
 }
-.progress-status-text {
+.submit-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+.submit-lang {
+    font-size: 0.72rem;
+    color: var(--text-subtle);
+    background: rgba(88,166,255,0.08);
+    border: 1px solid rgba(88,166,255,0.2);
+    border-radius: 20px;
+    padding: 3px 10px;
+}
+
+/* ── 코드 에디터 (textarea) ── */
+.code-editor {
+    width: 100%;
+    height: 220px;
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.9rem;
-    color: var(--muted);
-    font-family: 'JetBrains Mono', monospace;
+    color: #f8f8f2;
+    line-height: 1.7;
+    resize: vertical;       /* 세로 크기 조절 가능 */
+    outline: none;
+    transition: border-color 0.18s;
+    margin-bottom: 12px;
 }
-/* ★ % 숫자 크게 강조 */
-#progress-pct {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 2rem;       /* 크게 */
-    font-weight: 700;
-    color: var(--accent-bright);
-    line-height: 1;
-    transition: color 0.3s;
+.code-editor:focus {
+    border-color: rgba(88,166,255,0.5);
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.08);
 }
-#progress-pct.done-success { color: var(--green); }
-#progress-pct.done-fail    { color: var(--red);   }
+.code-editor::placeholder { color: var(--text-subtle); }
 
-/* 진행 바 */
-.progress-bar-wrap {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    height: 10px;
+/* ── 제출 버튼 ── */
+.btn-submit {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #1f6feb, #2d7dd2);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.02em;
+}
+.btn-submit:hover {
+    background: linear-gradient(135deg, #2d7dd2, #388bfd);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(31,111,235,0.35);
+}
+.btn-submit:active { transform: translateY(0); }
+
+/* ── 채점 진행 영역 ── */
+.judge-area { margin-top: 16px; }
+
+/* 프로그레스 바: 채점 시작 전엔 숨김 */
+.progress-wrap { display: none; margin-bottom: 12px; }
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+.progress-bar-bg {
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
     overflow: hidden;
-    margin-bottom: 16px;
 }
-#progress-bar {
+.progress-bar-fill {
     height: 100%;
+    /* 그라데이션으로 시각적으로 예쁘게 */
+    background: linear-gradient(90deg, var(--blue-dark), var(--blue));
+    border-radius: 3px;
+    /* width 가 JS 에서 바뀔 때 부드럽게 전환 */
+    transition: width 0.12s ease;
     width: 0%;
-    background: var(--accent-bright);
-    border-radius: 6px;
-    transition: width 0.35s ease, background 0.4s ease;
 }
 
-/* 테스트케이스 결과 행 */
-#tc-results {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.tc-result-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.88rem;
-    animation: rowIn 0.18s ease;
-}
-@keyframes rowIn {
-    from { opacity: 0; transform: translateX(-6px); }
-    to   { opacity: 1; transform: translateX(0); }
-}
-.tc-badge {
-    min-width: 72px;
-    text-align: center;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-weight: 700;
-    font-size: 0.78rem;
-}
-.badge-pending { background: rgba(74,106,138,0.15); color: var(--muted);  }
-.badge-running { background: rgba(204,167,0,0.15);  color: var(--yellow); }
-.badge-pass    { background: rgba(86,211,100,0.15); color: var(--green);  }
-.badge-fail    { background: rgba(248,81,73,0.15);  color: var(--red);    }
-.badge-error   { background: rgba(248,81,73,0.15);  color: var(--red);    }
-
-/* ── 최종 결과 ── */
-.final-result {
-    display: none;
-    margin-top: 20px;
-    padding: 22px;
+/* ── 채점 결과 박스 ── */
+.result-display {
+    padding: 15px 20px;
     border-radius: 8px;
     text-align: center;
-    font-size: 1.9rem;
-    font-weight: 900;
-    font-family: 'JetBrains Mono', monospace;
-    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-size: 1.35rem;
+    font-weight: 800;
+    display: none; /* 결과가 나올 때만 표시 */
 }
-@keyframes popIn {
-    from { transform: scale(0.9); opacity: 0; }
-    to   { transform: scale(1);   opacity: 1; }
-}
-.final-result.success {
-    background: rgba(86,211,100,0.08);
-    border: 1px solid rgba(86,211,100,0.3);
+.res-success {
     color: var(--green);
+    background: rgba(63,185,80,0.08);
+    border: 1px solid rgba(63,185,80,0.25);
 }
-.final-result.fail {
+.res-fail {
+    color: var(--red);
     background: rgba(248,81,73,0.08);
-    border: 1px solid rgba(248,81,73,0.3);
-    color: var(--red);
-}
-
-/* ── 에러 로그 ── */
-#error-log {
-    display: none;
-    margin-top: 12px;
-    padding: 16px;
-    background: rgba(248,81,73,0.05);
     border: 1px solid rgba(248,81,73,0.25);
-    border-radius: 6px;
-    color: var(--red);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-    line-height: 1.7;
+}
+.res-error {
+    color: var(--yellow);
+    background: rgba(227,179,65,0.08);
+    border: 1px solid rgba(227,179,65,0.25);
+    font-size: 1rem;
 }
 
-/* ── 반응형 ── */
-@media (max-width: 700px) {
-    .sidebar { display: none; }
-    .tc-grid { grid-template-columns: 1fr; }
-    .main { padding: 24px 14px 60px; }
+/* ── 오답 상세 로그 ── */
+.error-log {
+    display: none;
+    margin-top: 10px;
+    padding: 14px 16px;
+    background: rgba(248,81,73,0.05);
+    border: 1px solid rgba(248,81,73,0.2);
+    color: #ff7b72;
+    border-radius: 7px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    line-height: 1.65;
 }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
