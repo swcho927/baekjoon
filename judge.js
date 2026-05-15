@@ -118,12 +118,9 @@ function runCode(code, input, timeLimitMs, memLimitMB) {
 
     try {
         while (pc >= 0 && pc < linesArr.length) {
-            // 시간 제한 체크
             if (Date.now() - startTime > timeLimitMs) {
                 return { output: outputBuffer.trim(), verdict: "TLE" };
             }
-
-            // 메모리 제한 체크 (키 개수 × 8바이트로 추정)
             if (Object.keys(memory).length * 8 > memLimitBytes) {
                 return { output: outputBuffer.trim(), verdict: "MLE" };
             }
@@ -183,10 +180,10 @@ async function submitCode(probId) {
     var code = document.getElementById("editor-" + probId).value.trim();
     if (!code) { alert("코드를 입력해주세요."); return; }
 
-    var tcs          = prob.testCases;
-    var total        = tcs.length;
-    var timeLimitMs  = prob.timeLimit * 1000;
-    var memLimitMB   = prob.memoryLimit;
+    var tcs         = prob.testCases;
+    var total       = tcs.length;
+    var timeLimitMs = prob.timeLimit * 1000;
+    var memLimitMB  = prob.memoryLimit;
 
     var btn          = document.getElementById("sBtn-"         + probId);
     var progressWrap = document.getElementById("progressWrap-" + probId);
@@ -219,23 +216,22 @@ async function submitCode(probId) {
         var result = runCode(code, tc.in, timeLimitMs, memLimitMB);
         var pct    = Math.round(((i + 1) / total) * 100);
 
+        // 진행 바 업데이트
         progressNum.textContent  = (i + 1) + " / " + total;
         progressFill.style.width = pct + "%";
         progressText.textContent = pct + "%";
 
-        // 오답 / TLE / MLE / RE → 즉시 중단
-        var failed = false;
+        // 판정
+        var verdict = result.verdict;
+        var failed  = verdict !== "AC";
         var failMsg = "";
 
-        if (result.verdict === "TLE") {
-            failed  = true;
+        if (verdict === "TLE") {
             failMsg = "[테스트 " + (i+1) + "] 시간 초과";
-        } else if (result.verdict === "MLE") {
-            failed  = true;
+        } else if (verdict === "MLE") {
             failMsg = "[테스트 " + (i+1) + "] 메모리 초과";
-        } else if (result.verdict.startsWith("RE")) {
-            failed  = true;
-            failMsg = "[테스트 " + (i+1) + "] 런타임 에러\n" + result.verdict.slice(4);
+        } else if (verdict.startsWith("RE")) {
+            failMsg = "[테스트 " + (i+1) + "] 런타임 에러\n" + verdict.slice(4);
         } else if (result.output.trim() !== String(tc.out).trim()) {
             failed  = true;
             failMsg =
@@ -245,11 +241,15 @@ async function submitCode(probId) {
                 "내 출력: " + result.output;
         }
 
+        // 화면 업데이트 후 판정 결과 반영
+        // (await 로 브라우저에게 렌더링 기회를 준 뒤 중단)
+        await new Promise(function(r) { setTimeout(r, 80); });
+
         if (failed) {
             progressFill.style.background = "var(--red)";
             resultBox.style.display = "block";
             resultBox.className     = "result-display res-fail";
-            resultBox.textContent   = failMsg.split("\n")[0]; // 첫 줄만 큰 글씨로
+            resultBox.textContent   = failMsg.split("\n")[0];
             errorLog.style.display  = "block";
             errorLog.textContent    = failMsg;
             btn.disabled    = false;
@@ -257,8 +257,6 @@ async function submitCode(probId) {
             isJudging       = false;
             return;
         }
-
-        await new Promise(function(r) { setTimeout(r, 80); });
     }
 
     // ── 전부 통과 ──
