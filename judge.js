@@ -65,7 +65,7 @@ function initEngine() {
 //  @param input {string} stdin 입력값
 //  @returns Promise<{ output: string, error: string }>
 // ════════════════════════════════════════════════════════
-async function takeStep() {
+async function runCode(code, input) {
     if (!isDebugMode) toggleMode();
     document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
     let linesArr = editor.value.split('\n');
