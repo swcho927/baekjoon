@@ -287,9 +287,12 @@ document.addEventListener('DOMContentLoaded', function() {
     Object.keys(window.PROBLEMS).forEach(function(probId) {
         var prob = window.PROBLEMS[probId];
 
+        // 테스트케이스 개수 표시
         var tcEl = document.getElementById("tcCount-" + probId);
         if (tcEl) tcEl.textContent = prob.testCases.length + "개";
 
+        // 기본 코드 삽입
+        // textarea가 비어있을 때만 삽입 (사용자가 이미 작성 중이면 덮어쓰지 않음)
         var editorEl = document.getElementById("editor-" + probId);
         if (editorEl && prob.defaultCode && editorEl.value.trim() === "") {
             editorEl.value = prob.defaultCode;
