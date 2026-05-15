@@ -65,50 +65,59 @@ function initEngine() {
 //  @param input {string} stdin 입력값
 //  @returns Promise<{ output: string, error: string }>
 // ════════════════════════════════════════════════════════
-function runCode(code, input) {
-    return new Promise(function (resolve) {
-        var outputBuffer = "";  // print() 출력 모을 버퍼
-        var inputLines   = input.split("\n"); // 줄 단위로 입력 분리
-        var inputIndex   = 0;
-
-        Sk.configure({
-            // print() 호출 시 출력을 버퍼에 저장
-            output: function (text) {
-                outputBuffer += text;
-            },
-            // sys, io 등 내장 파일 읽기
-            read: function (filename) {
-                if (Sk.builtinFiles === undefined ||
-                    Sk.builtinFiles.files[filename] === undefined) {
-                    throw new Error("파일 없음: " + filename);
-                }
-                return Sk.builtinFiles.files[filename];
-            },
-            // sys.stdin.readline() 호출 시 다음 줄 반환
-            inputfun: function () {
-                if (inputIndex < inputLines.length) {
-                    return inputLines[inputIndex++];
-                }
-                return "";
-            },
-            __future__: Sk.python3,
-        });
-
-        // 코드 실행 (비동기 Promise 방식)
-        var exec = Sk.misceval.asyncToPromise(function () {
-            return Sk.importMainWithBody("<stdin>", false, code, true);
-        });
-
-        // 실행 성공
-        exec.then(function () {
-            resolve({ output: outputBuffer.trim(), error: "" });
-        });
-
-        // 실행 실패 (문법 에러, 런타임 에러 등)
-        exec.catch(function (err) {
-            resolve({ output: outputBuffer.trim(), error: err.toString() });
-        });
-    });
+async function takeStep() {
+    if (!isDebugMode) toggleMode();
+    document.querySelectorAll('.line.active').forEach(el => el.classList.remove('active'));
+    let linesArr = editor.value.split('\n');
+    if (pc < 0 || pc >= linesArr.length) { log("\n>>> 프로그램 종료."); return false; }
+    
+    const lineEl = document.getElementById(`line-${pc}`);
+    if (lineEl) { lineEl.classList.add('active'); lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    
+    let fullLine = linesArr[pc].split('#')[0].trim();
+    let jumped = false;
+    
+    if (fullLine) {
+        try {
+            if (fullLine.includes("뭐더라")) { 
+                let [m, e] = fullLine.split("뭐더라"); 
+                let targetAddr = resolveAddr(m.trim());
+                memory[targetAddr] = getVal(e.trim()); 
+            }
+            else if (fullLine.includes("진짜뭐지")) { 
+                // 문자 1개를 입력받아 ASCII/유니코드 저장
+                let m = fullLine.replace("진짜뭐지", "").trim(); 
+                let targetAddr = resolveAddr(m);
+                let val = await requestConsoleInput(`[${targetAddr}번] 문자 입력:`);
+                if (val === null) return false; // 입력 취소(강제중지) 시 스텝 종료
+                memory[targetAddr] = (val && val.length > 0) ? val.charCodeAt(0) : 0; 
+            }
+            else if (fullLine.includes("진짜뭐냐")) { 
+                // 값을 문자로 변환하여 줄바꿈 없이 출력
+                printOut(String.fromCharCode(getVal(fullLine.replace("진짜뭐냐", "")))); 
+            }
+            else if (fullLine.includes("뭐지")) { 
+                let m = fullLine.replace("뭐지", "").trim(); 
+                let targetAddr = resolveAddr(m);
+                let val = await requestConsoleInput(`[${targetAddr}번] 숫자 입력:`);
+                if (val === null) return false; // 💡 입력 취소(강제중지) 시 스텝 종료
+                memory[targetAddr] = parseInt(val) || 0; 
+            }
+            else if (fullLine.includes("뭐냐")) { 
+                // 값을 줄바꿈 없이 출력
+                printOut(getVal(fullLine.replace("뭐냐", ""))); 
+            }
+            else if (fullLine.includes("있잖아")) { 
+                let offset = getVal(fullLine.replace("있잖아", "")); 
+                pc += offset; jumped = true; 
+            }
+        } catch (err) { log(`\nError: ${err}`, "#ff5555"); }
+    }
+    
+    if (!jumped) pc++;
+    updateMemoryView();
+    updateHighlight();
+    return true;
 }
 
 
