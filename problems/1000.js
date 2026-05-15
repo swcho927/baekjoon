@@ -14,6 +14,11 @@ window.PROBLEMS['1000'] = {
     title:       "A+B",
     timeLimit:   2,
     memoryLimit: 256,
+    defaultCode:
+`그거 뭐지
+그그거 뭐지
+그거 뭐더라 그거,그그거
+그거 뭐냐`,
     testCases: [
         // 경계값
         { in: "1\n1", out: "2"  },
