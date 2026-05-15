@@ -6,13 +6,7 @@ var monacoEditor = null;
 var engineReady  = false;
 var isJudging    = false;
 
-// 임시 테스트 케이스 (실제 환경에 맞게 PROBLEM_1000 등으로 교체 가능)
-var PROBLEM_1000 = {
-    testCases: [
-        { in: "1 2", out: "3" },
-        { in: "10 20", out: "30" }
-    ]
-};
+
 
 // ════════════════════════════════════════════════════════
 //  1. Monaco 에디터 초기화
