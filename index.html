@@ -2,264 +2,198 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>DevJudge Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>그뭐냐 Judge</title>
+
+    <!-- 구글 폰트: 코딩 느낌의 JetBrains Mono + 한글용 Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <!-- 스타일시트 -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- problems/*.js 보다 반드시 먼저 선언돼야 하는 공통 유틸 -->
-    <script>
-        window.PROBLEMS = {};
-        function seededRand(seed) {
-            let s = seed >>> 0;
-            return () => {
-                s = Math.imul(s, 1664525) + 1013904223 >>> 0;
-                return s / 0x100000000;
-            };
-        }
-    </script>
+    <!--
+        ★★★ 핵심: Skulpt 로드 (Pyodide 대체)
+        ────────────────────────────────────────
+        Pyodide를 버린 이유:
+          - 30MB 이상 다운로드 필요 → 로딩 매우 느림
+          - Web Worker 내부에서 CDN 재로드 → 환경에 따라 막힘
+
+        Skulpt를 쓰는 이유:
+          - 파일 2개, 수백KB → 즉시 로드
+          - <script> 태그로 로드하면 Sk 전역 객체 바로 사용 가능
+          - 나중에 친구분 JS 컴파일러로 교체 시 judge.js의
+            runCode() 함수 안만 수정하면 됩니다.
+
+        skulpt.min.js     → Skulpt 핵심 엔진
+        skulpt-stdlib.js  → Python 표준 라이브러리 (sys, io 등)
+    -->
+    <script src="https://skulpt.org/js/skulpt.min.js"></script>
+    <script src="https://skulpt.org/js/skulpt-stdlib.js"></script>
+
+    <!-- Monaco 에디터 로더 (VS Code와 동일한 코드 에디터) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+
+    <!-- 문제 데이터: problems 폴더에서 관리 -->
+    <!-- 새 문제 추가 시 여기에 <script src="problems/번호.js"> 추가 -->
+    <script src="problems/1000.js"></script>
 </head>
 <body>
 
-<!-- ── 상단 바 ── -->
-<div class="topbar">
-    <span class="topbar-brand">DEVJUDGE <span>PRO</span></span>
-    <div class="topbar-divider"></div>
-    <div class="topbar-status">
-        <div class="status-dot loading" id="statusDot"></div>
-        <span id="statusLabel">Python 엔진 로딩 중...</span>
+<!-- ════════════════════════════════════════════════════
+     네비게이션 바
+     ════════════════════════════════════════════════════ -->
+<nav class="navbar">
+    <a class="navbar-brand" href="#">그뭐냐 JUDGE</a>
+    <span class="navbar-sub">/ 1000번</span>
+
+    <!-- 엔진 로딩 상태: 로딩중(깜박)→준비완료(초록)→에러(빨강) -->
+    <div class="engine-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">엔진 초기화 중...</span>
     </div>
-</div>
+</nav>
 
-<div class="layout">
 
-    <!-- ── 사이드바 ── -->
-    <nav class="sidebar">
-        <div class="sidebar-label">문제 목록</div>
+<!-- ════════════════════════════════════════════════════
+     메인 컨텐츠
+     ════════════════════════════════════════════════════ -->
+<div class="main">
 
-        <a class="sidebar-item active" id="tab-aplusb" onclick="switchProblem('aplusb')">
-            <span class="sidebar-num">1000</span>
-            <span class="sidebar-title">A+B</span>
-            <span class="sidebar-badge badge-silver">Bronze</span>
-        </a>
+    <!-- 문제 번호 + 제목 -->
+    <div class="problem-header">
+        <div class="problem-num" id="prob-num">PROBLEM #1000</div>
+        <div class="problem-title" id="prob-title">A+B</div>
+    </div>
 
-        <a class="sidebar-item" id="tab-tomato" onclick="switchProblem('tomato')">
-            <span class="sidebar-num">7576</span>
-            <span class="sidebar-title">토마토</span>
-            <span class="sidebar-badge badge-silver">Silver</span>
-        </a>
-
-        <a class="sidebar-item" id="tab-knapsack" onclick="switchProblem('knapsack')">
-            <span class="sidebar-num">12865</span>
-            <span class="sidebar-title">평범한 배낭</span>
-            <span class="sidebar-badge badge-gold">Gold</span>
-        </a>
-    </nav>
-
-    <!-- ── 메인 콘텐츠 ── -->
-    <div class="main-content">
-
-        <!-- ══ 1000. A+B ══ -->
-        <div class="prob-page active" id="page-aplusb">
-        <div class="container">
-            <div class="problem-header">
-                <div class="problem-number">백준 1000번</div>
-                <h1 class="problem-title">A+B</h1>
-            </div>
-            <table class="info-table">
-                <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
-                <tbody><tr><td>2 초</td><td>256 MB</td><td id="tcCountAplusb">생성 중...</td><td>100 점</td></tr></tbody>
-            </table>
-
-            <div class="section-title">문제</div>
-            <div class="content-box">두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.</div>
-
-            <div class="section-title">입력</div>
-            <div class="content-box">첫째 줄에 A와 B가 주어진다. (0 &lt; A, B &lt; 10)</div>
-
-            <div class="section-title">출력</div>
-            <div class="content-box">첫째 줄에 A+B를 출력한다.</div>
-
-            <div class="section-title">예제</div>
-            <div class="examples-grid">
-                <div class="example-block">
-                    <div class="example-header">입력 1</div>
-                    <div class="example-content">1 2</div>
-                </div>
-                <div class="example-block">
-                    <div class="example-header">출력 1</div>
-                    <div class="example-content">3</div>
-                </div>
-            </div>
-
-            <div class="submit-section">
-                <div class="submit-header">
-                    <span class="submit-title">코드 제출</span>
-                    <span class="submit-lang">Python 3 · Pyodide v0.25.0</span>
-                </div>
-                <div class="editor-wrap" id="editor-aplusb"></div>
-                <button id="sBtn-aplusb" class="btn-submit" onclick="submitCode('aplusb')" disabled>Python 엔진 로딩 중...</button>
-                <div class="judge-area">
-                    <div class="progress-wrap" id="progressWrap-aplusb">
-                        <div class="progress-info">
-                            <span>채점 중 <span id="progressNum-aplusb">0 / 0</span></span>
-                            <span id="progressText-aplusb">0%</span>
-                        </div>
-                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill-aplusb"></div></div>
-                    </div>
-                    <div id="resultBox-aplusb" class="result-display"></div>
-                    <div id="errorLog-aplusb"  class="error-log"></div>
-                </div>
-            </div>
+    <!-- 시간/메모리 제한 정보 -->
+    <div class="info-table">
+        <div class="info-cell">
+            <div class="label">시간 제한</div>
+            <div class="value" id="info-time">—</div>
         </div>
+        <div class="info-cell">
+            <div class="label">메모리 제한</div>
+            <div class="value" id="info-mem">—</div>
+        </div>
+        <div class="info-cell">
+            <div class="label">테스트케이스</div>
+            <div class="value" id="info-tc">—</div>
+        </div>
+    </div>
+
+    <!-- 문제 설명 -->
+    <div class="section-title">문제</div>
+    <div class="content-box" id="prob-desc">로딩 중...</div>
+
+    <!-- 입력 형식 -->
+    <div class="section-title">입력</div>
+    <div class="content-box" id="prob-input">로딩 중...</div>
+
+    <!-- 출력 형식 -->
+    <div class="section-title">출력</div>
+    <div class="content-box" id="prob-output">로딩 중...</div>
+
+    <!-- 예제 테스트케이스 (JS에서 동적으로 생성) -->
+    <div class="section-title">예제</div>
+    <div id="examples-container"></div>
+
+
+    <!-- ════════════════════════════════════════════════
+         제출 섹션
+         ════════════════════════════════════════════════ -->
+    <div class="submit-section">
+        <div class="submit-title">// 코드 제출</div>
+
+        <!-- Monaco 에디터가 이 div 안에 생성됩니다 -->
+        <div id="editor-container"></div>
+
+        <!--
+            제출 버튼
+            - 처음엔 disabled (엔진 로딩 완료 전)
+            - 엔진 준비 완료 시 judge.js의 initEngine()이 활성화
+        -->
+        <button id="submit-btn" onclick="startJudge()" disabled>
+            엔진 초기화 중...
+        </button>
+
+        <!-- ── 채점 진행 영역 (채점 시작 전엔 숨김) ── -->
+        <div id="progress-section">
+            <!-- 진행 상태 텍스트 + 퍼센트 -->
+            <div class="progress-label">
+                <span id="progress-text">채점 준비 중...</span>
+                <span id="progress-pct">0%</span>
+            </div>
+            <!-- 진행 바 -->
+            <div class="progress-bar-wrap">
+                <div id="progress-bar"></div>
+            </div>
+            <!-- 테스트케이스별 결과 목록 (JS에서 동적 생성) -->
+            <div id="tc-results"></div>
         </div>
 
-        <!-- ══ 7576. 토마토 ══ -->
-        <div class="prob-page" id="page-tomato">
-        <div class="container">
-            <div class="problem-header">
-                <div class="problem-number">백준 7576번</div>
-                <h1 class="problem-title">토마토</h1>
-            </div>
-            <table class="info-table">
-                <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
-                <tbody><tr><td>2 초</td><td>256 MB</td><td id="tcCountTomato">생성 중...</td><td>100 점</td></tr></tbody>
-            </table>
+        <!-- 최종 결과 (맞았습니다!! / 틀렸습니다) -->
+        <div class="final-result" id="final-result"></div>
 
-            <div class="section-title">문제</div>
-            <div class="content-box">
-                철수의 토마토 농장에서는 토마토를 보관하는 큰 창고를 가지고 있다.
-                보관 후 하루가 지나면, 익은 토마토들의 인접한 곳(상하좌우)에 있는 익지 않은 토마토들이 익게 된다.
-                며칠이 지나면 토마토들이 모두 익게 되는지, 그 최소 일수를 구하는 프로그램을 작성하시오.
-            </div>
+        <!-- 에러/오답 상세 로그 -->
+        <div id="error-log"></div>
+    </div>
 
-            <div class="section-title">입력</div>
-            <div class="content-box">
-                첫 줄에는 상자의 크기를 나타내는 두 정수 M, N이 주어진다. (2 ≤ M, N ≤ 1,000)<br>
-                둘째 줄부터는 상자에 담긴 토마토의 정보가 주어진다.
-                1은 익은 토마토, 0은 익지 않은 토마토, -1은 토마토가 들어있지 않은 칸을 나타낸다.
-            </div>
+</div><!-- /.main -->
 
-            <div class="section-title">출력</div>
-            <div class="content-box">
-                토마토가 모두 익을 때까지의 최소 날짜를 출력한다.
-                만약 처음부터 다 익어있으면 0, 모두 익지 못하는 상황이면 -1을 출력한다.
-            </div>
 
-            <div class="section-title">예제</div>
-            <div class="examples-grid">
-                <div class="example-block">
-                    <div class="example-header">입력 1</div>
-                    <div class="example-content">6 4
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 1</div>
-                </div>
-                <div class="example-block">
-                    <div class="example-header">출력 1</div>
-                    <div class="example-content">8</div>
-                </div>
-            </div>
-
-            <div class="submit-section">
-                <div class="submit-header">
-                    <span class="submit-title">코드 제출</span>
-                    <span class="submit-lang">Python 3 · Pyodide v0.25.0</span>
-                </div>
-                <div class="editor-wrap" id="editor-tomato"></div>
-                <button id="sBtn-tomato" class="btn-submit" onclick="submitCode('tomato')" disabled>Python 엔진 로딩 중...</button>
-                <div class="judge-area">
-                    <div class="progress-wrap" id="progressWrap-tomato">
-                        <div class="progress-info">
-                            <span>채점 중 <span id="progressNum-tomato">0 / 0</span></span>
-                            <span id="progressText-tomato">0%</span>
-                        </div>
-                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill-tomato"></div></div>
-                    </div>
-                    <div id="resultBox-tomato" class="result-display"></div>
-                    <div id="errorLog-tomato"  class="error-log"></div>
-                </div>
-            </div>
-        </div>
-        </div>
-
-        <!-- ══ 12865. 평범한 배낭 ══ -->
-        <div class="prob-page" id="page-knapsack">
-        <div class="container">
-            <div class="problem-header">
-                <div class="problem-number">백준 12865번</div>
-                <h1 class="problem-title">평범한 배낭</h1>
-            </div>
-            <table class="info-table">
-                <thead><tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th><th>배점</th></tr></thead>
-                <tbody><tr><td>2 초</td><td>512 MB</td><td id="tcCountKnapsack">생성 중...</td><td>100 점</td></tr></tbody>
-            </table>
-
-            <div class="section-title">문제</div>
-            <div class="content-box">
-                이 문제는 아주 평범한 배낭에 관한 문제이다.<br><br>
-                준서가 여행에 필요하다고 생각하는 N개의 물건이 있다. 각 물건은 무게 W와 가치 V를 가지는데,
-                해당 물건을 배낭에 넣어서 가면 준서가 V만큼 즐길 수 있다.
-                아직 행군을 해본 적이 없는 준서는 최대 K만큼의 무게만을 넣을 수 있는 배낭만 들고 다닐 수 있다.
-                준서가 최대한 즐거운 여행을 하기 위해 배낭에 넣을 수 있는 물건들의 가치의 최댓값을 알려주자.
-            </div>
-
-            <div class="section-title">입력</div>
-            <div class="content-box">
-                첫 줄에 물품의 수 N(1 ≤ N ≤ 100)과 준서가 버틸 수 있는 무게 K(1 ≤ K ≤ 100,000)가 주어진다.<br>
-                두 번째 줄부터 N개의 줄에 걸쳐 각 물건의 무게 W(1 ≤ W ≤ 100,000)와
-                해당 물건의 가치 V(0 ≤ V ≤ 1,000)가 주어진다.
-            </div>
-
-            <div class="section-title">출력</div>
-            <div class="content-box">한 줄에 배낭에 넣을 수 있는 물건들의 가치합의 최댓값을 출력한다.</div>
-
-            <div class="section-title">예제</div>
-            <div class="examples-grid">
-                <div class="example-block">
-                    <div class="example-header">입력 1</div>
-                    <div class="example-content">4 7
-6 13
-4 8
-3 6
-5 12</div>
-                </div>
-                <div class="example-block">
-                    <div class="example-header">출력 1</div>
-                    <div class="example-content">14</div>
-                </div>
-            </div>
-
-            <div class="submit-section">
-                <div class="submit-header">
-                    <span class="submit-title">코드 제출</span>
-                    <span class="submit-lang">Python 3 · Pyodide v0.25.0</span>
-                </div>
-                <div class="editor-wrap" id="editor-knapsack"></div>
-                <button id="sBtn-knapsack" class="btn-submit" onclick="submitCode('knapsack')" disabled>Python 엔진 로딩 중...</button>
-                <div class="judge-area">
-                    <div class="progress-wrap" id="progressWrap-knapsack">
-                        <div class="progress-info">
-                            <span>채점 중 <span id="progressNum-knapsack">0 / 0</span></span>
-                            <span id="progressText-knapsack">0%</span>
-                        </div>
-                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill-knapsack"></div></div>
-                    </div>
-                    <div id="resultBox-knapsack" class="result-display"></div>
-                    <div id="errorLog-knapsack"  class="error-log"></div>
-                </div>
-            </div>
-        </div>
-        </div>
-
-    </div><!-- /main-content -->
-</div><!-- /layout -->
-
-<script src="problems/aplusb.js"></script>
-<script src="problems/tomato.js"></script>
-<script src="problems/knapsack.js"></script>
+<!-- ════════════════════════════════════════════════════
+     채점 로직 로드
+     ════════════════════════════════════════════════════ -->
 <script src="judge.js"></script>
-<script>initJudge();</script>
+
+<script>
+    // ── 페이지 로드 완료 시 초기화 ──────────────────────
+    // DOMContentLoaded: HTML 파싱 완료 후 실행
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // 1. problems/1000.js에서 정의된 PROBLEM_1000 데이터로 UI 채우기
+        loadProblemUI(PROBLEM_1000);
+
+        // 2. Monaco 에디터 + Skulpt 엔진 초기화 (judge.js의 함수)
+        initEditor(PROBLEM_1000.starterCode);
+    });
+
+
+    // 문제 데이터를 받아서 화면에 표시하는 함수
+    function loadProblemUI(prob) {
+        // 제목/번호
+        document.getElementById('prob-num').textContent   = 'PROBLEM #' + prob.id;
+        document.getElementById('prob-title').textContent = prob.title;
+
+        // 제한 정보
+        document.getElementById('info-time').textContent = prob.timeLimit + '초';
+        document.getElementById('info-mem').textContent  = prob.memoryLimit + 'MB';
+        document.getElementById('info-tc').textContent   = prob.testCases.length + '개';
+
+        // 문제 본문 (innerHTML: HTML 태그 허용)
+        document.getElementById('prob-desc').innerHTML   = prob.description;
+        document.getElementById('prob-input').innerHTML  = prob.inputDesc;
+        document.getElementById('prob-output').innerHTML = prob.outputDesc;
+
+        // 예제 테스트케이스 동적 생성
+        const container = document.getElementById('examples-container');
+        prob.examples.forEach(function (ex, idx) {
+            var grid = document.createElement('div');
+            grid.className = 'tc-grid';
+            grid.style.marginBottom = '12px';
+            grid.innerHTML =
+                '<div class="tc-box">' +
+                    '<div class="tc-box-header">예제 입력 ' + (idx + 1) + '</div>' +
+                    '<div class="tc-box-content">' + ex.input + '</div>' +
+                '</div>' +
+                '<div class="tc-box">' +
+                    '<div class="tc-box-header">예제 출력 ' + (idx + 1) + '</div>' +
+                    '<div class="tc-box-content">' + ex.output + '</div>' +
+                '</div>';
+            container.appendChild(grid);
+        });
+    }
+</script>
+
 </body>
 </html>
