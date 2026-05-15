@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="style.css">
 
     <script>
-        // 전체 문제 목록을 담는 전역 레지스트리
         window.PROBLEMS = {};
     </script>
 </head>
@@ -25,10 +24,13 @@
     <nav class="sidebar">
         <div class="sidebar-label">문제 목록</div>
 
-        <!-- 문제가 추가될 때마다 여기에 항목을 추가 -->
         <a class="sidebar-item active" id="tab-1000" onclick="switchProblem('1000')">
             <span class="sidebar-num">1000</span>
             <span class="sidebar-title">A+B</span>
+        </a>
+        <a class="sidebar-item" id="tab-2000" onclick="switchProblem('2000')">
+            <span class="sidebar-num">2000</span>
+            <span class="sidebar-title">피보나치 수</span>
         </a>
     </nav>
 
@@ -44,7 +46,6 @@
                 <h1 class="problem-title">A+B</h1>
             </div>
 
-            <!-- 문제 정보 테이블 -->
             <table class="info-table">
                 <thead>
                     <tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th></tr>
@@ -86,44 +87,119 @@
                 </div>
             </div>
 
-            <!-- ── 코드 제출 영역 ── -->
             <div class="submit-section">
                 <div class="submit-header">
                     <span class="submit-title">코드 제출</span>
                     <span class="submit-lang">그 뭐냐 언어</span>
                 </div>
-
                 <textarea
                     id="editor-1000"
                     class="code-editor"
                     placeholder="여기에 그 뭐냐 코드를 작성하세요..."
                     spellcheck="false"
                 ></textarea>
-
                 <button
                     id="sBtn-1000"
                     class="btn-submit"
                     onclick="submitCode('1000')"
                 >제출 및 채점 시작</button>
 
-                <!-- 채점 진행 영역 -->
                 <div class="judge-area">
-
                     <div class="progress-wrap" id="progressWrap-1000">
                         <div class="progress-info">
-                            <span>채점 중&nbsp;
-                                <span id="progressNum-1000">0 / 0</span>
-                            </span>
+                            <span>채점 중&nbsp;<span id="progressNum-1000">0 / 0</span></span>
                             <span id="progressText-1000">0%</span>
                         </div>
                         <div class="progress-bar-bg">
                             <div class="progress-bar-fill" id="progressFill-1000"></div>
                         </div>
                     </div>
-
                     <div id="resultBox-1000" class="result-display"></div>
                     <div id="errorLog-1000" class="error-log"></div>
+                </div>
+            </div>
+        </div>
+        </div>
 
+        <!-- ══ 2000번: 피보나치 수 ══ -->
+        <div class="prob-page" id="page-2000">
+        <div class="container">
+
+            <div class="problem-header">
+                <div class="problem-number">2000번</div>
+                <h1 class="problem-title">피보나치 수</h1>
+            </div>
+
+            <table class="info-table">
+                <thead>
+                    <tr><th>시간 제한</th><th>메모리 제한</th><th>테스트 케이스</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2 초</td>
+                        <td>256 MB</td>
+                        <td id="tcCount-2000">생성 중...</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="section-title">문제</div>
+            <div class="content-box">
+                n이 주어졌을 때, n번째 피보나치 수를 출력하시오.
+                피보나치 수열은 F(1)=1, F(2)=1이며, n≥3인 경우 F(N) = F(N-1) + F(N-2) 로 정의된다.
+            </div>
+
+            <div class="section-title">입력</div>
+            <div class="content-box">
+                첫째 줄에 n이 주어진다. (1 ≤ n ≤ 30)
+            </div>
+
+            <div class="section-title">출력</div>
+            <div class="content-box">
+                첫째 줄에 n번째 피보나치 수를 출력한다.
+            </div>
+
+            <div class="section-title">예제</div>
+            <div class="examples-grid">
+                <div class="example-block">
+                    <div class="example-header">입력 1</div>
+                    <div class="example-content">5</div>
+                </div>
+                <div class="example-block">
+                    <div class="example-header">출력 1</div>
+                    <div class="example-content">5</div>
+                </div>
+            </div>
+
+            <div class="submit-section">
+                <div class="submit-header">
+                    <span class="submit-title">코드 제출</span>
+                    <span class="submit-lang">그 뭐냐 언어</span>
+                </div>
+                <textarea
+                    id="editor-2000"
+                    class="code-editor"
+                    placeholder="여기에 그 뭐냐 코드를 작성하세요..."
+                    spellcheck="false"
+                ></textarea>
+                <button
+                    id="sBtn-2000"
+                    class="btn-submit"
+                    onclick="submitCode('2000')"
+                >제출 및 채점 시작</button>
+
+                <div class="judge-area">
+                    <div class="progress-wrap" id="progressWrap-2000">
+                        <div class="progress-info">
+                            <span>채점 중&nbsp;<span id="progressNum-2000">0 / 0</span></span>
+                            <span id="progressText-2000">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progressFill-2000"></div>
+                        </div>
+                    </div>
+                    <div id="resultBox-2000" class="result-display"></div>
+                    <div id="errorLog-2000" class="error-log"></div>
                 </div>
             </div>
         </div>
@@ -133,12 +209,8 @@
     </div><!-- /main-content -->
 </div><!-- /layout -->
 
-<!--
-    로드 순서:
-    1. problems/1000.js  → PROBLEMS 에 문제 등록
-    2. judge.js          → PROBLEMS 를 읽어 채점 엔진 초기화
--->
 <script src="problems/1000.js"></script>
+<script src="problems/2000.js"></script>
 <script src="judge.js"></script>
 
 </body>
