@@ -5,10 +5,6 @@
     <title>그뭐냐 Judge</title>
     <link rel="stylesheet" href="style.css">
 
-    <!--
-        공통 전역 변수 및 유틸 함수를 가장 먼저 선언.
-        problems/*.js 가 로드될 때 이미 존재해야 하므로 <head> 에 배치.
-    -->
     <script>
         // 전체 문제 목록을 담는 전역 레지스트리
         window.PROBLEMS = {};
@@ -30,7 +26,7 @@
         <div class="sidebar-label">문제 목록</div>
 
         <!-- 문제가 추가될 때마다 여기에 항목을 추가 -->
-        <a class="sidebar-item active" id="tab-aplusb" onclick="switchProblem('aplusb')">
+        <a class="sidebar-item active" id="tab-1000" onclick="switchProblem('1000')">
             <span class="sidebar-num">1000</span>
             <span class="sidebar-title">A+B</span>
         </a>
@@ -40,7 +36,7 @@
     <div class="main-content">
 
         <!-- ══ 1000번: A+B ══ -->
-        <div class="prob-page active" id="page-aplusb">
+        <div class="prob-page active" id="page-1000">
         <div class="container">
 
             <div class="problem-header">
@@ -57,8 +53,7 @@
                     <tr>
                         <td>2 초</td>
                         <td>256 MB</td>
-                        <!-- generateTC() 가 실행되면 이 텍스트가 바뀜 -->
-                        <td id="tcCountAplusb">생성 중...</td>
+                        <td id="tcCount-1000">생성 중...</td>
                     </tr>
                 </tbody>
             </table>
@@ -98,43 +93,36 @@
                     <span class="submit-lang">그 뭐냐 언어</span>
                 </div>
 
-                <!-- 코드 입력 textarea -->
                 <textarea
-                    id="editor-aplusb"
+                    id="editor-1000"
                     class="code-editor"
                     placeholder="여기에 그 뭐냐 코드를 작성하세요..."
                     spellcheck="false"
                 ></textarea>
 
                 <button
-                    id="sBtn-aplusb"
+                    id="sBtn-1000"
                     class="btn-submit"
-                    onclick="submitCode('aplusb')"
+                    onclick="submitCode('1000')"
                 >제출 및 채점 시작</button>
 
                 <!-- 채점 진행 영역 -->
                 <div class="judge-area">
 
-                    <!-- 프로그레스 바 (채점 중에만 표시) -->
-                    <div class="progress-wrap" id="progressWrap-aplusb">
+                    <div class="progress-wrap" id="progressWrap-1000">
                         <div class="progress-info">
                             <span>채점 중&nbsp;
-                                <!-- "3 / 10" 형태로 현재 케이스 번호 표시 -->
-                                <span id="progressNum-aplusb">0 / 0</span>
+                                <span id="progressNum-1000">0 / 0</span>
                             </span>
-                            <!-- "30%" 형태로 퍼센트 표시 -->
-                            <span id="progressText-aplusb">0%</span>
+                            <span id="progressText-1000">0%</span>
                         </div>
                         <div class="progress-bar-bg">
-                            <div class="progress-bar-fill" id="progressFill-aplusb"></div>
+                            <div class="progress-bar-fill" id="progressFill-1000"></div>
                         </div>
                     </div>
 
-                    <!-- 최종 채점 결과 (맞았습니다 / 틀렸습니다 / 에러) -->
-                    <div id="resultBox-aplusb" class="result-display"></div>
-
-                    <!-- 오답일 때 어떤 케이스에서 틀렸는지 상세 정보 -->
-                    <div id="errorLog-aplusb" class="error-log"></div>
+                    <div id="resultBox-1000" class="result-display"></div>
+                    <div id="errorLog-1000" class="error-log"></div>
 
                 </div>
             </div>
@@ -146,11 +134,11 @@
 </div><!-- /layout -->
 
 <!--
-    로드 순서가 매우 중요:
-    1. problems/*.js  → 문제별 TC와 solver 를 PROBLEMS 에 등록
-    2. judge.js       → PROBLEMS 를 읽어 채점 엔진 초기화
+    로드 순서:
+    1. problems/1000.js  → PROBLEMS 에 문제 등록
+    2. judge.js          → PROBLEMS 를 읽어 채점 엔진 초기화
 -->
-<script src="problems/aplusb.js"></script>
+<script src="problems/1000.js"></script>
 <script src="judge.js"></script>
 
 </body>
